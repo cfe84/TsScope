@@ -37,6 +37,29 @@ public class Lexer(string source)
             case '\t':
             case '\r':
                 return null;
+            case '\n':
+                line++;
+                column = 1;
+                return null;
+            case ';':
+                return new Token(TokenType.SemiColon, null, line, column);
+            case ',':
+                return new Token(TokenType.Comma, null, line, column);
+            case '*':
+                return new Token(TokenType.Star, null, line, column);
+            case '=':
+                return new Token(TokenType.Equal, null, line, column);
+            case '(':
+                return new Token(TokenType.LParen, null, line, column);
+            case ')':
+                return new Token(TokenType.RParen, null, line, column);
+            case '#':
+                var directive = scanReservedKeyword(directives);
+                if (directive != null)
+                    return directive;
+                throw new LexError($"Unknown directive '#{peekWord()}'", startingLine, startingColumn);
+            case '"':
+                return scanString();
             case '/':
                 if (peek() == '/')
                 {
@@ -70,29 +93,6 @@ public class Lexer(string source)
                 {
                     throw new LexError($"Unexpected character '{c}'", startingLine, startingColumn);
                 }
-            case '\n':
-                line++;
-                column = 1;
-                return null;
-            case ';':
-                return new Token(TokenType.SemiColon, null, line, column);
-            case ',':
-                return new Token(TokenType.Comma, null, line, column);
-            case '*':
-                return new Token(TokenType.Star, null, line, column);
-            case '=':
-                return new Token(TokenType.Equal, null, line, column);
-            case '(':
-                return new Token(TokenType.LParen, null, line, column);
-            case ')':
-                return new Token(TokenType.RParen, null, line, column);
-            case '#':
-                var directive = scanReservedKeyword(directives);
-                if (directive != null)
-                    return directive;
-                throw new LexError($"Unknown keyword: #{peek(10)}", startingLine, startingColumn);
-            case '"':
-                return scanString();
             default:
                 if (char.IsDigit(c))
                 {
@@ -136,20 +136,43 @@ public class Lexer(string source)
 
     private Token scanReservedKeyword(Dictionary<string, TokenType> reservedKeywords)
     {
-        var matching = reservedKeywords.FirstOrDefault(keyword => keyword.Key == peek(keyword.Key.Length));
+        var identifier = peekWord();
+        var matching = reservedKeywords.FirstOrDefault(keyword => keyword.Key == identifier);
         if (matching.Key != null)
         {
-            next(matching.Key.Length);
+            next(identifier.Length);
             return new Token(matching.Value, null, startingLine, startingColumn);
         }
         return null;
     }
 
+    private string peekWord()
+    {
+        var end = this.index;
+
+        while (end < source.Length && char.IsLetter(source[end]))
+        {
+            end++;
+        }
+        return source.Substring(this.index, end - this.index);
+    }
+
     private Token scanString()
     {
         var str = new StringBuilder();
-        while (!isFinished() && peek() != '"')
+        var isEscaped = false;
+        while (!isFinished() && (peek() != '"' || isEscaped))
         {
+            if (peek() == '\\')
+            {
+                // Logic is just to account for escaping of \\. When
+                // we see a \ we first check if we were already escaping before.
+                isEscaped = !isEscaped;
+            }
+            else if (isEscaped)
+            {
+                isEscaped = false;
+            }
             str.Append(next());
         }
         if (peek() != '"')

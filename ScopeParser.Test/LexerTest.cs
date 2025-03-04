@@ -126,6 +126,42 @@ public class LexerTest
         tokens[1].Column.Should().Be(2);
     }
 
+    [Theory]
+    [InlineData("select")]
+    [InlineData("SELEC")]
+    [InlineData("Select")]
+    [InlineData("SELECt")]
+    [InlineData("SELECTION")]
+    public void TestIncorrectKeyword(string input)
+    {
+        // Given
+        var source = $"* \n // Some comment \n {input}\n*";
+        var lexer = new Lexer(source);
+
+        // When
+        var tokens = lexer.Scan().ToList();
+
+        // Then
+        CheckTokens([TokenType.Star, TokenType.Identifier, TokenType.Star, TokenType.EndOfFile], tokens);
+        tokens[1].Value.Should().Be(input);
+        tokens[1].Line.Should().Be(3);
+        tokens[1].Column.Should().Be(2);
+    }
+
+    [Fact]
+    public void TestIncorrectDirective()
+    {
+        // Given
+        var source = "// This is a comment\n #DEFINE \n*";
+        var lexer = new Lexer(source);
+
+        // When
+        Action action = () => lexer.Scan().ToList();
+
+        // Then
+        action.Should().Throw<LexError>().WithMessage("Unknown directive '#DEFINE'");
+    }
+
     [Fact]
     public void TestDirectiveAtTheEnd()
     {
@@ -193,11 +229,14 @@ public class LexerTest
         action.Should().Throw<LexError>().WithMessage("Unexpected character '%'");
     }
 
-    [Fact]
-    public void TestString()
+    [Theory]
+    [InlineData("\"Hello, World!\"")]
+    [InlineData("\"String with an escaped \\\" double quote\"")]
+    [InlineData("\"String with \\ Some more \\\\ escaping \\\t in the middle\"")]
+    public void TestString(string input)
     {
         // Given
-        var source = "/* A comment */ \n \"Hello, World!\" \n*";
+        var source = $"/* A comment */ \n {input} \n*";
         var lexer = new Lexer(source);
 
         // When
@@ -207,7 +246,7 @@ public class LexerTest
         CheckTokens([TokenType.String, TokenType.Star, TokenType.EndOfFile], tokens);
         tokens[0].Line.Should().Be(2);
         tokens[0].Column.Should().Be(2);
-        tokens[0].Value.Should().Be("Hello, World!");
+        tokens[0].Value.Should().Be(input.Substring(1, input.Length - 2));
     }
 
     private void CheckTokens(TokenType[] expected, List<Token> actual)

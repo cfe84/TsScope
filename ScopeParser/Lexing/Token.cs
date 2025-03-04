@@ -20,4 +20,9 @@ public class Token(TokenType tokenType, object? value, int line, int column)
     }
     return false;
   }
+
+  public override int GetHashCode()
+  {
+    return HashCode.Combine(TokenType, Value, Line, Column);
+  }
 }

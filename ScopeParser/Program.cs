@@ -39,10 +39,17 @@ class Program
   private static void run(string source)
   {
     var lexer = new Lexer(source);
-    var tokens = lexer.Scan().ToList();
-    foreach (var token in tokens)
+    try
     {
-      Console.WriteLine(token);
+      var tokens = lexer.Scan().ToList();
+      foreach (var token in tokens)
+      {
+        Console.WriteLine(token);
+      }
+    }
+    catch (LexError e)
+    {
+      Console.WriteLine($"LexError: {e.Problem} at line {e.Line}, column {e.Column}");
     }
   }
 }
