@@ -108,6 +108,7 @@ public class LexerTest
     [InlineData("#WARN", TokenType.Warn)]
     [InlineData("SELECT", TokenType.Select)]
     [InlineData("FROM", TokenType.From)]
+    [InlineData("EXTRACT", TokenType.Extract)]
     [InlineData("STREAM", TokenType.Stream)]
     [InlineData("WHERE", TokenType.Where)]
     [InlineData("AS", TokenType.As)]

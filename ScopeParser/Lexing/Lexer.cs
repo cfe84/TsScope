@@ -61,38 +61,7 @@ public class Lexer(string source)
             case '"':
                 return scanString();
             case '/':
-                if (peek() == '/')
-                {
-                    next();
-                    while (peek() != '\n')
-                    {
-                        next();
-                    }
-                    return null;
-                }
-                else if (peek() == '*')
-                {
-                    next();
-                    while (!isFinished() && peek(2) != "*/")
-                    {
-                        if (peek() == '\n')
-                        {
-                            line++;
-                            column = 1;
-                        }
-                        next();
-                    }
-                    if (isFinished())
-                    {
-                        throw new LexError("Unterminated block comment", startingLine, startingColumn);
-                    }
-                    next(2);
-                    return null;
-                }
-                else
-                {
-                    throw new LexError($"Unexpected character '{c}'", startingLine, startingColumn);
-                }
+                return comment(c);
             default:
                 if (char.IsDigit(c))
                 {
@@ -115,6 +84,42 @@ public class Lexer(string source)
         }
     }
 
+    private Token? comment(char c)
+    {
+        if (peek() == '/')
+        {
+            next();
+            while (peek() != '\n')
+            {
+                next();
+            }
+            return null;
+        }
+        else if (peek() == '*')
+        {
+            next();
+            while (!isFinished() && peek(2) != "*/")
+            {
+                if (peek() == '\n')
+                {
+                    line++;
+                    column = 1;
+                }
+                next();
+            }
+            if (isFinished())
+            {
+                throw new LexError("Unterminated block comment", startingLine, startingColumn);
+            }
+            next(2);
+            return null;
+        }
+        else
+        {
+            throw new LexError($"Unexpected character '{c}'", startingLine, startingColumn);
+        }
+    }
+
     Dictionary<string, TokenType> directives = new Dictionary<string, TokenType>
     {
         { "DECLARE", TokenType.Declare },
@@ -128,6 +133,7 @@ public class Lexer(string source)
 
     Dictionary<string, TokenType> reservedKeywords = new Dictionary<string, TokenType> {
         { "SELECT", TokenType.Select },
+        { "EXTRACT", TokenType.Extract },
         { "FROM", TokenType.From },
         { "STREAM", TokenType.Stream },
         { "WHERE", TokenType.Where },
