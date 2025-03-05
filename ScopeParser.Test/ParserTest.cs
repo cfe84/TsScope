@@ -47,6 +47,43 @@ public class ParserTest
         parser.Errors[0].Token.Should().Be(source[1]);
     }
 
+
+    [Fact]
+    public void TestSynchronization()
+    {
+        // Given
+        var source = new List<Token> {
+            new Token(TokenType.Identifier, "source_name", 1, 1),
+            fromTokenType(TokenType.Equal),
+            new Token(TokenType.Identifier, "source_name", 1, 1),
+            fromTokenType(TokenType.SemiColon),
+            new Token(TokenType.Identifier, "source_name", 1, 1),
+            fromTokenType(TokenType.Equal),
+            fromTokenType(TokenType.Select),
+            fromTokenType(TokenType.Star),
+            fromTokenType(TokenType.SemiColon),
+            new Token(TokenType.Identifier, "source_name", 1, 1),
+            fromTokenType(TokenType.Equal),
+            new Token(TokenType.Identifier, "source_name", 1, 1),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.Star),
+            fromTokenType(TokenType.Star),
+            fromTokenType(TokenType.EndOfFile),
+            };
+
+        // When
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // Then
+        script.Should().NotBeNull();
+        parser.HasErrors.Should().BeTrue();
+        parser.Errors.Should().HaveCount(2);
+        parser.Errors[0].Message.Should().Be("Expected 'FROM'");
+        parser.Errors[1].Message.Should().Be("Unexpected token");
+        parser.Errors[1].Token.TokenType.Should().Be(TokenType.Star);
+    }
+
     [Fact]
     public void TestAssignmentFromExtract()
     {

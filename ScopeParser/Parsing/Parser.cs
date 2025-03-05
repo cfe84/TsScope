@@ -48,6 +48,7 @@ namespace ScopeParser.Parsing
             var output = parseOutput();
             if (output != null) return output;
             Errors.Add(new ParseError("Unexpected token", next()));
+            synchronize();
             return null;
         }
 
@@ -203,8 +204,18 @@ namespace ScopeParser.Parsing
         private void synchronize()
         {
             if (isAtEnd()) return;
-            // TODO: Synchronize
-            next();
+            do
+            {
+                var token = peek();
+                switch (token.TokenType)
+                {
+                    case TokenType.Extract:
+                    case TokenType.Identifier:
+                    case TokenType.Output:
+                        return;
+                }
+                next();
+            } while (!isAtEnd());
         }
 
         private Token expect(TokenType type, string token)
@@ -228,6 +239,11 @@ namespace ScopeParser.Parsing
         private Token previous()
         {
             return tokens[current - 1];
+        }
+
+        private Token peek()
+        {
+            return tokens[current];
         }
 
         private Token next()
