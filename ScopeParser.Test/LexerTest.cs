@@ -1,9 +1,8 @@
-﻿namespace test;
+﻿namespace ScopeParser.Test;
 
 using Xunit;
 using ScopeParser.Lexing;
 using FluentAssertions;
-using System.Runtime.InteropServices;
 
 public class LexerTest
 {
@@ -109,9 +108,10 @@ public class LexerTest
     [InlineData("SELECT", TokenType.Select)]
     [InlineData("FROM", TokenType.From)]
     [InlineData("EXTRACT", TokenType.Extract)]
-    [InlineData("STREAM", TokenType.Stream)]
+    [InlineData("OUTPUT", TokenType.Output)]
     [InlineData("WHERE", TokenType.Where)]
     [InlineData("AS", TokenType.As)]
+    [InlineData("TO", TokenType.To)]
     public void TestDirectiveAndKeywords(string input, TokenType expected)
     {
         // Given
@@ -177,7 +177,7 @@ public class LexerTest
         CheckTokens([TokenType.Star, TokenType.Identifier, TokenType.EndOfFile], tokens);
         tokens[1].Line.Should().Be(3);
         tokens[1].Column.Should().Be(2);
-        tokens[1].Value.Should().Be("SELEC");
+        tokens[1].ValueAs<string>().Should().Be("SELEC");
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public class LexerTest
         CheckTokens([TokenType.String, TokenType.Star, TokenType.EndOfFile], tokens);
         tokens[0].Line.Should().Be(2);
         tokens[0].Column.Should().Be(2);
-        tokens[0].Value.Should().Be(input.Substring(1, input.Length - 2));
+        tokens[0].ValueAs<string>().Should().Be(input.Substring(1, input.Length - 2));
     }
 
     private void CheckTokens(TokenType[] expected, List<Token> actual)

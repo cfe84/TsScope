@@ -31,7 +31,7 @@ class Program
     while (true)
     {
       Console.Write("> ");
-      string source = Console.ReadLine();
+      string source = Console.ReadLine() ?? "";
       run(source);
     }
   }

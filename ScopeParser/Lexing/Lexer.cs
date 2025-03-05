@@ -133,14 +133,15 @@ public class Lexer(string source)
 
     Dictionary<string, TokenType> reservedKeywords = new Dictionary<string, TokenType> {
         { "SELECT", TokenType.Select },
+        { "OUTPUT", TokenType.Output },
         { "EXTRACT", TokenType.Extract },
         { "FROM", TokenType.From },
-        { "STREAM", TokenType.Stream },
         { "WHERE", TokenType.Where },
         { "AS", TokenType.As },
+        { "TO", TokenType.To },
     };
 
-    private Token scanReservedKeyword(Dictionary<string, TokenType> reservedKeywords)
+    private Token? scanReservedKeyword(Dictionary<string, TokenType> reservedKeywords)
     {
         var identifier = peekWord();
         var matching = reservedKeywords.FirstOrDefault(keyword => keyword.Key == identifier);

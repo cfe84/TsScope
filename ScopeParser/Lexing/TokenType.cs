@@ -9,7 +9,9 @@ namespace ScopeParser.Lexing
     Identifier, VariableName,
     Equal,
 
-    Select, Extract, From, Stream, Where, As,
+    Select, Extract, From, Where, As,
+
+    Output, To,
 
     String, Integer, Float,
 

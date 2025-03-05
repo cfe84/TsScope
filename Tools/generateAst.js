@@ -1,6 +1,39 @@
 const fs = require('fs');
 const path = require('path');
 
+
+function run() {
+  const outputDirectory = getOutputDir();
+  const terminalTypes = {
+    "Script": ["Statement[] statements"],
+    "Assignment":  ["Identifier variableName", "Source source"],
+    "FileSource": ["FieldSpec fieldSpec", "string fileName"],
+    "FieldList": ["Field[] fields"],
+    "Star": [],
+    "Field": ["string name"],
+    "Identifier": ["string value"],
+    "SelectQuery": ["FieldSpec fields", "Source source"],
+    "Output": ["Source source", "string outputFile"],
+  };
+  const compositeTypes = {
+    "Statement": ["Assignment", "Output"],
+    "Source": ["FileSource", "SelectQuery", "Identifier"],
+    "FieldSpec": ["FieldList", "Star"],
+  };
+  const types = {};
+  for (const [type, fields] of Object.entries(terminalTypes)) {
+    const compositedIn = Object.keys(compositeTypes).find(key => compositeTypes[key].indexOf(type) >= 0);
+    const parentType = compositedIn || "Node";
+    types[type] = { parentType, fields, isComposite: false };
+  };
+  for (const type of Object.keys(compositeTypes)) {
+    const parentType = "Node";
+    types[type] = { parentType, fields: [], isComposite: true };
+  }
+  createAst(outputDirectory, "Node", types);
+}
+
+
 function getOutputDir() {
   const args = process.argv.slice(2);
   if (args.length === 0) {
@@ -9,12 +42,12 @@ function getOutputDir() {
   return args[0];
 }
 
-function createAst(outputDirectory, baseName, fields) {
+function createAst(outputDirectory, baseName, types) {
   createBaseNode(outputDirectory, baseName);
-  for (const [name, fieldList] of Object.entries(fields)) {
-    createType(outputDirectory, name, baseName, fieldList);
+  for (const [name, config] of Object.entries(types)) {
+    createType(outputDirectory, name, config, baseName);
   }
-  createVisitor(outputDirectory, baseName, Object.entries(fields));
+  createVisitor(outputDirectory, baseName, Object.entries(types));
 }
 
 const header = `// This file is auto-generated. Do not modify it directly.
@@ -25,24 +58,32 @@ using System;
 namespace ScopeParser.Ast;
 `;
 
-function createType(outputDirectory, name, baseName, fields) {
+function createType(outputDirectory, name, config, baseName) {
   const basePath = path.join(outputDirectory, `${name}.cs`);
 
   function generateFieldGetter(field) {
     const [type, name] = field.split(' ');
     const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
-    return `public ${type} ${capitalizedName} => ${name};`;
+    return `    public ${type} ${capitalizedName} => ${name};`;
   }
 
-  fs.writeFileSync(basePath, `${header}
-public class ${name}(${fields.join(', ')}) : ${baseName} {
+  const parameters = config.fields.length > 0 ? `(${config.fields.join(', ')})` : '';
+  if (config.isComposite) {
+    fs.writeFileSync(basePath, `${header}
+public abstract class ${name}${parameters} : ${config.parentType} {}
+`);
+  } else {
+    fs.writeFileSync(basePath, `${header}
+public class ${name}${parameters} : ${config.parentType} {
+      
     public override void Visit<T>(I${baseName}Visitor<T> visitor) {
         visitor.Visit${name}(this);
     }
-
-    ${fields.map(field => generateFieldGetter(field)).join('\n\n')}
+      
+${config.fields.map(field => generateFieldGetter(field)).join('\n\n')}
 }
-`);
+      `);    
+  }
 }
 
 function createBaseNode(outputDirectory, baseName) {
@@ -58,15 +99,14 @@ function createVisitor(outputDirectory, baseName, fields) {
   const basePath = path.join(outputDirectory, `I${baseName}Visitor.cs`);
   fs.writeFileSync(basePath, `${header}
 public interface I${baseName}Visitor<T> {
-    ${fields.map(([name]) => `T Visit${name}(${name} node);`).join('\n    ')}
+    public T Visit(${baseName} node);
+
+    ${fields
+      .filter(([_, config]) => !config.isComposite)
+      .map(([name]) => `public T Visit${name}(${name} node);`)
+      .join('\n    ')}
 }
 `);
 }
 
-const outputDirectory = getOutputDir();
-createAst(outputDirectory, "Node", {
-  "FileSource": ["FieldList fields", "string fileName"],
-  "Stream": ["FieldList fields", "string fileName"],
-  "FieldList": ["Field[] fields"],
-  "Field": ["string name"],
-});
+run();
