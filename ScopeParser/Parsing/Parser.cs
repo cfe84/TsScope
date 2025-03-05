@@ -128,7 +128,7 @@ namespace ScopeParser.Parsing
                 var fieldSpec = parseFieldSpec();
                 expect(TokenType.From, "FROM");
                 // TODO: Support variable name as well.
-                var filename = expect(TokenType.String, "an identifier");
+                var filename = expect(TokenType.String, "a string with filename");
                 return new FileSource(fieldSpec, filename.ValueAs<string>());
             }
             return null;
@@ -195,7 +195,7 @@ namespace ScopeParser.Parsing
         /// <returns></returns>
         private Field parseField()
         {
-            var identifier = expect(TokenType.Identifier, "identifer");
+            var identifier = expect(TokenType.Identifier, "field identifier");
             // TODO: Support "AS"
             // TODO: Support named source
             return new Field(identifier.ValueAs<string>());

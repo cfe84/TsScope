@@ -18,7 +18,8 @@ public class Token(TokenType tokenType, object? value, int line, int column)
 
   public override string ToString()
   {
-    return $"{TokenType} {value} {Line} {Column}";
+    var value = Value != null ? $"\"{Value}\"" : "";
+    return $"{TokenType} {value} (line {Line}, column {Column})";
   }
 
   public override bool Equals(object? obj)

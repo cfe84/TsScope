@@ -1,4 +1,5 @@
 ﻿using ScopeParser.Lexing;
+using ScopeParser.Parsing;
 
 class Program
 {
@@ -42,14 +43,23 @@ class Program
     try
     {
       var tokens = lexer.Scan().ToList();
-      foreach (var token in tokens)
+      var parser = new Parser(tokens);
+      var script = parser.parse();
+      if (parser.HasErrors)
       {
-        Console.WriteLine(token);
+        foreach (var error in parser.Errors)
+        {
+          Console.Error.WriteLine($"Parsing error: {error}");
+        }
+      }
+      else
+      {
+        Console.WriteLine(script);
       }
     }
     catch (LexError e)
     {
-      Console.WriteLine($"LexError: {e.Problem} at line {e.Line}, column {e.Column}");
+      Console.Error.WriteLine($"Syntax error: {e.Problem} at line {e.Line}, column {e.Column}");
     }
   }
 }

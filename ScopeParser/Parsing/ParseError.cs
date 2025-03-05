@@ -16,7 +16,7 @@ namespace ScopeParser.Parsing
 
         public override string ToString()
         {
-            return $"{base.ToString()} (Line: {Token.Line}, Column: {Token.Column})";
+            return $"{Problem}: ${Token}";
         }
     }
 }
