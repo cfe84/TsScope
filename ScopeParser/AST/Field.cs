@@ -7,8 +7,8 @@ namespace ScopeParser.Ast;
 
 public class Field(string name) : Node {
       
-    public override void Visit<T>(INodeVisitor<T> visitor) {
-        visitor.VisitField(this);
+    public override T Visit<T>(INodeVisitor<T> visitor) {
+        return visitor.VisitField(this);
     }
       
     public string Name => name;

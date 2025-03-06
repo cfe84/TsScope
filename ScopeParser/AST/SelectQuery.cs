@@ -7,8 +7,8 @@ namespace ScopeParser.Ast;
 
 public class SelectQuery(FieldSpec fields, Source source) : Source {
       
-    public override void Visit<T>(INodeVisitor<T> visitor) {
-        visitor.VisitSelectQuery(this);
+    public override T Visit<T>(INodeVisitor<T> visitor) {
+        return visitor.VisitSelectQuery(this);
     }
       
     public FieldSpec Fields => fields;

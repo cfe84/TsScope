@@ -7,8 +7,8 @@ namespace ScopeParser.Ast;
 
 public class Identifier(string value) : Source {
       
-    public override void Visit<T>(INodeVisitor<T> visitor) {
-        visitor.VisitIdentifier(this);
+    public override T Visit<T>(INodeVisitor<T> visitor) {
+        return visitor.VisitIdentifier(this);
     }
       
     public string Value => value;

@@ -89,7 +89,7 @@ public class Lexer(string source)
         if (peek() == '/')
         {
             next();
-            while (peek() != '\n')
+            while (!isFinished() && peek() != '\n')
             {
                 next();
             }

@@ -7,8 +7,8 @@ namespace ScopeParser.Ast;
 
 public class FileSource(FieldSpec fieldSpec, string fileName) : Source {
       
-    public override void Visit<T>(INodeVisitor<T> visitor) {
-        visitor.VisitFileSource(this);
+    public override T Visit<T>(INodeVisitor<T> visitor) {
+        return visitor.VisitFileSource(this);
     }
       
     public FieldSpec FieldSpec => fieldSpec;

@@ -76,8 +76,8 @@ public abstract class ${name}${parameters} : ${config.parentType} {}
     fs.writeFileSync(basePath, `${header}
 public class ${name}${parameters} : ${config.parentType} {
       
-    public override void Visit<T>(I${baseName}Visitor<T> visitor) {
-        visitor.Visit${name}(this);
+    public override T Visit<T>(I${baseName}Visitor<T> visitor) {
+        return visitor.Visit${name}(this);
     }
       
 ${config.fields.map(field => generateFieldGetter(field)).join('\n\n')}
@@ -90,7 +90,7 @@ function createBaseNode(outputDirectory, baseName) {
   const basePath = path.join(outputDirectory, `${baseName}.cs`);
   fs.writeFileSync(basePath, `${header}
 public abstract class ${baseName} {
-    public abstract void Visit<T>(I${baseName}Visitor<T> visitor);
+    public abstract T Visit<T>(I${baseName}Visitor<T> visitor);
 }
 `);
 }

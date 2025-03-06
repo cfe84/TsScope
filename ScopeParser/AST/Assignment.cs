@@ -7,8 +7,8 @@ namespace ScopeParser.Ast;
 
 public class Assignment(Identifier variableName, Source source) : Statement {
       
-    public override void Visit<T>(INodeVisitor<T> visitor) {
-        visitor.VisitAssignment(this);
+    public override T Visit<T>(INodeVisitor<T> visitor) {
+        return visitor.VisitAssignment(this);
     }
       
     public Identifier VariableName => variableName;

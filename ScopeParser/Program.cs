@@ -1,4 +1,6 @@
-﻿using ScopeParser.Lexing;
+﻿using System.IO;
+using ScopeParser.Backend;
+using ScopeParser.Lexing;
 using ScopeParser.Parsing;
 
 class Program
@@ -23,8 +25,13 @@ class Program
 
   private static void runFile(string filename)
   {
-    string source = System.IO.File.ReadAllText(filename);
-    run(source);
+    string source = File.ReadAllText(filename);
+    string outputFile = filename.Replace(".scope", ".ts");
+    string? res = run(source);
+    if (res != null)
+    {
+      File.WriteAllText(outputFile, res);
+    }
   }
 
   private static void runREPL()
@@ -33,11 +40,15 @@ class Program
     {
       Console.Write("> ");
       string source = Console.ReadLine() ?? "";
-      run(source);
+      var res = run(source);
+      if (res != null)
+      {
+        Console.WriteLine(res);
+      }
     }
   }
 
-  private static void run(string source)
+  private static string? run(string source)
   {
     var lexer = new Lexer(source);
     try
@@ -51,15 +62,19 @@ class Program
         {
           Console.Error.WriteLine($"Parsing error: {error}");
         }
+        return null;
       }
       else
       {
-        Console.WriteLine(script);
+        var snippetProvider = new FsSnippetProvider("ScopeParser/Backend/TypeScriptSnippets");
+        var backend = new TypeScriptBackend(snippetProvider);
+        return backend.Visit(script);
       }
     }
     catch (LexError e)
     {
       Console.Error.WriteLine($"Syntax error: {e.Problem} at line {e.Line}, column {e.Column}");
+      return null;
     }
   }
 }

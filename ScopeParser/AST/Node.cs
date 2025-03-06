@@ -6,5 +6,5 @@ using System;
 namespace ScopeParser.Ast;
 
 public abstract class Node {
-    public abstract void Visit<T>(INodeVisitor<T> visitor);
+    public abstract T Visit<T>(INodeVisitor<T> visitor);
 }

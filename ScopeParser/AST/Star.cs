@@ -7,8 +7,8 @@ namespace ScopeParser.Ast;
 
 public class Star : FieldSpec {
       
-    public override void Visit<T>(INodeVisitor<T> visitor) {
-        visitor.VisitStar(this);
+    public override T Visit<T>(INodeVisitor<T> visitor) {
+        return visitor.VisitStar(this);
     }
       
 

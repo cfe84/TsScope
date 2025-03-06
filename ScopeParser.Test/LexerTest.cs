@@ -52,6 +52,20 @@ public class LexerTest
     }
 
     [Fact]
+    public void TestJustAComment()
+    {
+        // Given
+        var source = "// This is a comment";
+        var lexer = new Lexer(source);
+
+        // When
+        var tokens = lexer.Scan().ToList();
+
+        // Then
+        tokens[0].Should().Be(new Token(TokenType.EndOfFile, null, 1, 21));
+    }
+
+    [Fact]
     public void TestSingleLineComment()
     {
         // Given
