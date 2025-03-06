@@ -1,2 +1,4 @@
-input = EXTRACT * FROM "input.csv";
-OUTPUT input TO "output.csv";
+input = EXTRACT id, firstName, age FROM "input.csv";
+filtered = SELECT id, firstName FROM input;
+OUTPUT filtered TO "output.csv";
+OUTPUT input TO "input_copy.csv";

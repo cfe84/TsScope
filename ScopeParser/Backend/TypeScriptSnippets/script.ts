@@ -6,6 +6,8 @@ interface IConsumer {
   receiveSchema(schema: string[]): void;
 }
 
+type Filter = (field: string) => boolean;
+
 abstract class Source {
   private consumers: IConsumer[] = [];
 
@@ -22,17 +24,17 @@ abstract class Source {
   }
 }
 
-interface IStartableSource {
+interface IStartable {
   start(): void;
 }
 
-class FileSource extends Source implements IStartableSource {
+class FileSource extends Source implements IStartable {
   private fields: string[] = [];
 
-  constructor(filePath: string, private filter: (field: string) => boolean) {
+  constructor(filePath: string, private filter: Filter) {
     super();
     this.file = fs.createReadStream(filePath);
-    startableSources.push(this);
+    startable.push(this);
   }
 
   private aggregate = "";
@@ -64,11 +66,13 @@ class FileSource extends Source implements IStartableSource {
     if (this.fields.length === 0) {
       // first line, extract fields
       this.fields = valuesInLine;
-      this.notifyConsumersSchema(this.fields);
-      // TODO: filter fields
+      this.notifyConsumersSchema(this.fields.filter(this.filter));
     } else {
       const record: Record<string, any> = {};
       this.fields.forEach((field, index) => {
+        if (!this.filter(field)) {
+          return;
+        }
         record[field] = valuesInLine[index];
       });
       this.notifyConsumers(record);
@@ -76,6 +80,25 @@ class FileSource extends Source implements IStartableSource {
   }
 
   private file: fs.ReadStream;
+}
+
+class SelectQuerySource extends Source implements IConsumer {
+  constructor(private source: Source, private filter: Filter) {
+    super();
+    source.registerConsumer(this);
+  }
+
+  receiveSchema(schema: string[]): void {
+    this.notifyConsumersSchema(schema.filter((field) => this.filter(field)));
+  }
+
+  receiveRecord(record: Record<string, any>): void {
+    this.notifyConsumers(
+      Object.fromEntries(
+        Object.entries(record).filter(([field]) => this.filter(field))
+      )
+    );
+  }
 }
 
 interface IClosableOutput {
@@ -96,10 +119,22 @@ class FileOutput implements IConsumer, IClosableOutput {
   close(): void {}
 }
 
-const startableSources: IStartableSource[] = [];
+const startable: IStartable[] = [];
 const closableOutputs: IClosableOutput[] = [];
+
+///////////////////////////////////////////////
+//                                           //
+//              End boilerplate              //
+//                                           //
+///////////////////////////////////////////////
 
 /*%statements%*/
 
-startableSources.forEach((source) => source.start());
+///////////////////////////////////////////////
+//                                           //
+//             Resume boilerplate            //
+//                                           //
+///////////////////////////////////////////////
+
+startable.forEach((source) => source.start());
 closableOutputs.forEach((output) => output.close());

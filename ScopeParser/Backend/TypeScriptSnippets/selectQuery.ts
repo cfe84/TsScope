@@ -1,0 +1,1 @@
+new SelectQuerySource(__source__, __fields__)

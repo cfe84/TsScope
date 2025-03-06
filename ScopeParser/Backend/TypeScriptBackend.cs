@@ -37,14 +37,13 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitField(Field field)
     {
-        return snippetProvider.GetSnippet("field",
-            ("name", field.Name)
-        );
+        return field.Name;
     }
 
     public string VisitFieldList(FieldList node)
     {
         var fields = node.Fields.Select(Visit).ToList();
+        fields = fields.Select(field => "\"" + field + "\"").ToList();
         return snippetProvider.GetSnippet("fieldList",
             ("fields", string.Join(", ", fields))
         );
