@@ -1,0 +1,1 @@
+(record: any) => __condition__

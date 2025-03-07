@@ -9,6 +9,7 @@ public interface INodeVisitor<T> {
     public T Visit(Node node);
 
     public T VisitScript(Script node);
+    public T VisitWhereStatement(WhereStatement node);
     public T VisitAssignment(Assignment node);
     public T VisitFileSource(FileSource node);
     public T VisitFieldList(FieldList node);

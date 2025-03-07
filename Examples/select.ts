@@ -6,7 +6,8 @@ interface IConsumer {
   receiveSchema(schema: string[]): void;
 }
 
-type Filter = (field: string) => boolean;
+type FieldsFilter = (field: string) => boolean;
+type RecordFilter = (record: Record<string, any>) => boolean;
 
 abstract class Source {
   private consumers: IConsumer[] = [];
@@ -31,7 +32,7 @@ interface IStartable {
 class FileSource extends Source implements IStartable {
   private fields: string[] = [];
 
-  constructor(filePath: string, private filter: Filter) {
+  constructor(filePath: string, private filter: FieldsFilter) {
     super();
     this.file = fs.createReadStream(filePath);
     startable.push(this);
@@ -83,19 +84,28 @@ class FileSource extends Source implements IStartable {
 }
 
 class SelectQuerySource extends Source implements IConsumer {
-  constructor(private source: Source, private filter: Filter) {
+  constructor(
+    private source: Source,
+    private fieldsFilter: FieldsFilter,
+    private where?: RecordFilter
+  ) {
     super();
     source.registerConsumer(this);
   }
 
   receiveSchema(schema: string[]): void {
-    this.notifyConsumersSchema(schema.filter((field) => this.filter(field)));
+    this.notifyConsumersSchema(
+      schema.filter((field) => this.fieldsFilter(field))
+    );
   }
 
   receiveRecord(record: Record<string, any>): void {
+    if (this.where && !this.where(record)) {
+      return;
+    }
     this.notifyConsumers(
       Object.fromEntries(
-        Object.entries(record).filter(([field]) => this.filter(field))
+        Object.entries(record).filter(([field]) => this.fieldsFilter(field))
       )
     );
   }
@@ -129,11 +139,14 @@ const closableOutputs: IClosableOutput[] = [];
 ///////////////////////////////////////////////
 
 const input_0 = new FileSource("input.csv", (field: string) => ["id", "firstName", "age"].includes(field));
-const filtered_0 = new SelectQuerySource(input_0, (field: string) => ["id", "firstName"].includes(field));
-const output_0 = new FileOutput("output.csv");
-filtered_0.registerConsumer(output_0);
+const fields_0 = new SelectQuerySource(input_0, (field: string) => ["id", "firstName"].includes(field), null);
+const filtered_0 = new SelectQuerySource(input_0, (field: string) => ["firstName", "age"].includes(field), (record: any) => record.age > 30);
+const output_0 = new FileOutput("fields.csv");
+fields_0.registerConsumer(output_0);
 const output_1 = new FileOutput("input_copy.csv");
 input_0.registerConsumer(output_1);
+const output_2 = new FileOutput("filtered.csv");
+filtered_0.registerConsumer(output_2);
 
 ///////////////////////////////////////////////
 //                                           //

@@ -6,7 +6,8 @@ interface IConsumer {
   receiveSchema(schema: string[]): void;
 }
 
-type Filter = (field: string) => boolean;
+type FieldsFilter = (field: string) => boolean;
+type RecordFilter = (record: Record<string, any>) => boolean;
 
 abstract class Source {
   private consumers: IConsumer[] = [];
@@ -31,7 +32,7 @@ interface IStartable {
 class FileSource extends Source implements IStartable {
   private fields: string[] = [];
 
-  constructor(filePath: string, private filter: Filter) {
+  constructor(filePath: string, private filter: FieldsFilter) {
     super();
     this.file = fs.createReadStream(filePath);
     startable.push(this);
@@ -83,19 +84,28 @@ class FileSource extends Source implements IStartable {
 }
 
 class SelectQuerySource extends Source implements IConsumer {
-  constructor(private source: Source, private filter: Filter) {
+  constructor(
+    private source: Source,
+    private fieldsFilter: FieldsFilter,
+    private where?: RecordFilter
+  ) {
     super();
     source.registerConsumer(this);
   }
 
   receiveSchema(schema: string[]): void {
-    this.notifyConsumersSchema(schema.filter((field) => this.filter(field)));
+    this.notifyConsumersSchema(
+      schema.filter((field) => this.fieldsFilter(field))
+    );
   }
 
   receiveRecord(record: Record<string, any>): void {
+    if (this.where && !this.where(record)) {
+      return;
+    }
     this.notifyConsumers(
       Object.fromEntries(
-        Object.entries(record).filter(([field]) => this.filter(field))
+        Object.entries(record).filter(([field]) => this.fieldsFilter(field))
       )
     );
   }

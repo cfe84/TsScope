@@ -1,1 +1,1 @@
-new SelectQuerySource(__source__, __fields__)
+new SelectQuerySource(__source__, __fields__, __where__)

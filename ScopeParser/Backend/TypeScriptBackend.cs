@@ -78,9 +78,11 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     {
         var fields = Visit(node.Fields);
         var source = Visit(node.Source);
+        var where = node.Where != null ? Visit(node.Where) : "null";
         return snippetProvider.GetSnippet("selectQuery",
             ("fields", fields),
-            ("source", source)
+            ("source", source),
+            ("where", where)
         );
     }
 
@@ -92,5 +94,12 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     private string getOutputName(int count)
     {
         return "output_" + count;
+    }
+
+    public string VisitWhereStatement(WhereStatement node)
+    {
+        return snippetProvider.GetSnippet("whereStatement",
+            ("condition", node.Condition)
+        );
     }
 }

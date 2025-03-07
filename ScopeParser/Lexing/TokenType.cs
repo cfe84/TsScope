@@ -18,6 +18,9 @@ namespace ScopeParser.Lexing
     LParen, RParen,
 
     Star, Comma, SemiColon,
+
+    TsExpression,
+
     EndOfFile,
   }
 }

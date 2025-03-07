@@ -135,7 +135,7 @@ namespace ScopeParser.Parsing
         }
 
         /// <summary>
-        /// <SELECT_QUERY> = "SELECT" <FIELD_SPEC> "FROM" <SOURCE>
+        /// <SELECT_QUERY> = "SELECT" <FIELD_SPEC> "FROM" <SELECT_SOURCE> [ <WHERE_STATEMENT> ]
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
@@ -146,7 +146,23 @@ namespace ScopeParser.Parsing
                 var fieldSpec = parseFieldSpec();
                 expect(TokenType.From, "FROM");
                 var source = parseSource();
-                return new SelectQuery(fieldSpec, source);
+                var where = parseWhereStatement();
+                return new SelectQuery(fieldSpec, source, where);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// "WHERE" <TS_EXPRESSION>
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        private WhereStatement? parseWhereStatement()
+        {
+            if (match(TokenType.Where))
+            {
+                var expression = expect(TokenType.TsExpression, "a valid TS expression");
+                return new WhereStatement(expression.ValueAs<string>());
             }
             return null;
         }

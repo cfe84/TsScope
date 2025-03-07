@@ -5,16 +5,12 @@ using System;
 
 namespace ScopeParser.Ast;
 
-public class SelectQuery(FieldSpec fields, Source source, WhereStatement? where) : Source {
+public class WhereStatement(string condition) : Node {
       
     public override T Visit<T>(INodeVisitor<T> visitor) {
-        return visitor.VisitSelectQuery(this);
+        return visitor.VisitWhereStatement(this);
     }
       
-    public FieldSpec Fields => fields;
-
-    public Source Source => source;
-
-    public WhereStatement? Where => where;
+    public string Condition => condition;
 }
       

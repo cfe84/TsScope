@@ -260,6 +260,36 @@ public class ParserTest
         validateIdentifierSource(select.Source, "input");
     }
 
+    [Fact]
+    public void TestSelectWhere()
+    {
+        // Given
+        var source = new List<Token> {
+            new Token(TokenType.Identifier, "output", 1, 1),
+            fromTokenType(TokenType.Equal),
+            fromTokenType(TokenType.Select),
+            fromTokenType(TokenType.Star),
+            fromTokenType(TokenType.From),
+            new Token(TokenType.Identifier, "input", 1, 4),
+            fromTokenType(TokenType.Where),
+            new Token(TokenType.TsExpression, "filter", 1, 5),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script);
+        var assignment = validateAssignment(script.Statements[0], "output");
+        var select = validateSelectQuery(assignment.Source);
+        validateStar(select.Fields);
+        validateIdentifierSource(select.Source, "input");
+        validateWhereQuery(select, "filter");
+    }
+
     private void validateScript(Parser parser, Script script, int statementCount = 1)
     {
         parser.HasErrors.Should().BeFalse();
@@ -297,6 +327,14 @@ public class ParserTest
     {
         source.Should().BeOfType<SelectQuery>();
         return (SelectQuery)source;
+    }
+
+    private WhereStatement validateWhereQuery(SelectQuery selectQuery, string expected)
+    {
+        selectQuery.Where.Should().NotBeNull();
+        var whereQuery = selectQuery.Where;
+        whereQuery.Condition.Should().Be(expected);
+        return (WhereStatement)selectQuery.Where;
     }
 
     private Identifier validateIdentifierSource(Source source, string expected)

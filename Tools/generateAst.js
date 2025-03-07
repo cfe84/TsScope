@@ -6,13 +6,14 @@ function run() {
   const outputDirectory = getOutputDir();
   const terminalTypes = {
     "Script": ["Statement[] statements"],
+    "WhereStatement": ["string condition"],
     "Assignment":  ["Identifier variableName", "Source source"],
     "FileSource": ["FieldSpec fieldSpec", "string fileName"],
     "FieldList": ["Field[] fields"],
     "Star": [],
     "Field": ["string name"],
     "Identifier": ["string value"],
-    "SelectQuery": ["FieldSpec fields", "Source source"],
+    "SelectQuery": ["FieldSpec fields", "Source source", "WhereStatement? where"],
     "Output": ["Source source", "string outputFile"],
   };
   const compositeTypes = {

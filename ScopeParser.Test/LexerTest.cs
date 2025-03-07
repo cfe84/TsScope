@@ -264,6 +264,25 @@ public class LexerTest
         tokens[0].ValueAs<string>().Should().Be(input.Substring(1, input.Length - 2));
     }
 
+    [Theory]
+    [InlineData("{dfsfs.toString()}")]
+    [InlineData("{ \"This string has \\}\" }")]
+    public void TestTsExpression(string input)
+    {
+        // Given
+        var source = $"/* A comment */ \n {input} \n*";
+        var lexer = new Lexer(source);
+
+        // When
+        var tokens = lexer.Scan().ToList();
+
+        // Then
+        CheckTokens([TokenType.TsExpression, TokenType.Star, TokenType.EndOfFile], tokens);
+        tokens[0].Line.Should().Be(2);
+        tokens[0].Column.Should().Be(2);
+        tokens[0].ValueAs<string>().Should().Be(input.Substring(1, input.Length - 2).Trim());
+    }
+
     private void CheckTokens(TokenType[] expected, List<Token> actual)
     {
         actual.Should().HaveCount(expected.Length);

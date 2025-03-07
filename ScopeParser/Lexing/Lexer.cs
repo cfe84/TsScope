@@ -60,6 +60,8 @@ public class Lexer(string source)
                 throw new LexError($"Unknown directive '#{peekWord()}'", startingLine, startingColumn);
             case '"':
                 return scanString();
+            case '{':
+                return scanTsExpression();
             case '/':
                 return comment(c);
             default:
@@ -188,6 +190,33 @@ public class Lexer(string source)
         }
         next();
         return new Token(TokenType.String, str.ToString(), startingLine, startingColumn);
+    }
+
+    // To simplify the process, ts expressions are between {}
+    private Token scanTsExpression()
+    {
+        var str = new StringBuilder();
+        var isEscaped = false;
+        while (!isFinished() && (peek() != '}' || isEscaped))
+        {
+            if (peek() == '\\')
+            {
+                // Logic is just to account for escaping of \\. When
+                // we see a \ we first check if we were already escaping before.
+                isEscaped = !isEscaped;
+            }
+            else if (isEscaped)
+            {
+                isEscaped = false;
+            }
+            str.Append(next());
+        }
+        if (peek() != '}')
+        {
+            throw new LexError("Unterminated TsExpression", startingLine, startingColumn);
+        }
+        next();
+        return new Token(TokenType.TsExpression, str.ToString().Trim(), startingLine, startingColumn);
     }
 
     private Token scanNumber()
