@@ -7,7 +7,8 @@ namespace ScopeParser.Ast;
 
 public class Script(Statement[] statements) : Node {
       
-    public override T Visit<T>(INodeVisitor<T> visitor) {
+    public override T Visit<T>(INodeVisitor<T> visitor)
+    {
         return visitor.VisitScript(this);
     }
       

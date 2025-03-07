@@ -5,12 +5,15 @@ using System;
 
 namespace ScopeParser.Ast;
 
-public class Field(string name) : Node {
+public class Field(string name, string? ns) : Node {
       
-    public override T Visit<T>(INodeVisitor<T> visitor) {
+    public override T Visit<T>(INodeVisitor<T> visitor)
+    {
         return visitor.VisitField(this);
     }
       
     public string Name => name;
+
+    public string? Ns => ns;
 }
       

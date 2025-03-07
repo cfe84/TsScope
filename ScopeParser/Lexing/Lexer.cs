@@ -53,6 +53,8 @@ public class Lexer(string source)
                 return new Token(TokenType.LParen, null, line, column);
             case ')':
                 return new Token(TokenType.RParen, null, line, column);
+            case '.':
+                return new Token(TokenType.Dot, null, line, column);
             case '#':
                 var directive = scanReservedKeyword(directives);
                 if (directive != null)

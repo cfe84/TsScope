@@ -239,6 +239,8 @@ public class ParserTest
             new Token(TokenType.Identifier, "output", 1, 1),
             fromTokenType(TokenType.Equal),
             fromTokenType(TokenType.Select),
+            new Token(TokenType.Identifier, "input", 1, 2),
+            fromTokenType(TokenType.Dot),
             new Token(TokenType.Identifier, "field_name", 1, 2),
             fromTokenType(TokenType.Comma),
             new Token(TokenType.Identifier, "field_name_2", 1, 3),
@@ -256,7 +258,7 @@ public class ParserTest
         validateScript(parser, script);
         var assignment = validateAssignment(script.Statements[0], "output");
         var select = validateSelectQuery(assignment.Source);
-        validateFields(select.Fields, "field_name", "field_name_2");
+        validateFields(select.Fields, ("input", "field_name"), (null, "field_name_2"));
         validateIdentifierSource(select.Source, "input");
     }
 
@@ -351,14 +353,15 @@ public class ParserTest
         return (Star)fieldSpec;
     }
 
-    private FieldList validateFields(FieldSpec fieldSpec, params string[] expected)
+    private FieldList validateFields(FieldSpec fieldSpec, params (string?, string)[] expected)
     {
         fieldSpec.Should().BeOfType<FieldList>();
         var fieldList = (FieldList)fieldSpec;
         fieldList.Fields.Should().HaveCount(expected.Length);
         for (int i = 0; i < expected.Length; i++)
         {
-            fieldList.Fields[i].Name.Should().Be(expected[i]);
+            fieldList.Fields[i].Ns.Should().Be(expected[i].Item1);
+            fieldList.Fields[i].Name.Should().Be(expected[i].Item2);
         }
         return fieldList;
     }

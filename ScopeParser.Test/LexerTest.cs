@@ -283,6 +283,22 @@ public class LexerTest
         tokens[0].ValueAs<string>().Should().Be(input.Substring(1, input.Length - 2).Trim());
     }
 
+    [Fact]
+    public void TestParsesDot()
+    {
+        // Given
+        var source = "a.b";
+        var lexer = new Lexer(source);
+
+        // When
+        var tokens = lexer.Scan().ToList();
+
+        // Then
+        CheckTokens([TokenType.Identifier, TokenType.Dot, TokenType.Identifier, TokenType.EndOfFile], tokens);
+        tokens[0].ValueAs<string>().Should().Be("a");
+        tokens[2].ValueAs<string>().Should().Be("b");
+    }
+
     private void CheckTokens(TokenType[] expected, List<Token> actual)
     {
         actual.Should().HaveCount(expected.Length);

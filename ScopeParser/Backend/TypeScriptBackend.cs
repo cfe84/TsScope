@@ -1,5 +1,6 @@
 namespace ScopeParser.Backend;
 
+using System.Text.RegularExpressions;
 using ScopeParser.Ast;
 
 public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<string>
@@ -15,6 +16,7 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         var statements = node.Statements.Select(Visit).ToList();
         var start = string.Join("\n", startableSources.Select(source => snippetProvider.GetSnippet("startSource", ("identifier", source))));
         var close = string.Join("\n", closableOutputs.Select(output => snippetProvider.GetSnippet("closeSource", ("identifier", output))));
+        // The main script snippet contains all the boiler plate. Statements are just inserted in its midst
         return snippetProvider.GetSnippet("script",
             ("statements", string.Join("\n", statements))
         );
@@ -22,9 +24,16 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitAssignment(Assignment assignment)
     {
+        // We keep track of variable reuse. Variables are renamed variableName_0, variableName_1, etc.
+        // This is to avoid name collisions in the generated code.
+        // Technically we could just reuse the same variable, but this is easier to read.
         if (!variableCount.ContainsKey(assignment.VariableName.Value))
         {
             variableCount[assignment.VariableName.Value] = 0;
+        }
+        else
+        {
+            variableCount[assignment.VariableName.Value]++;
         }
 
         var source = Visit(assignment.Source);
@@ -38,12 +47,16 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitField(Field field)
     {
+        // Account for qualified names:
+        if (field.Ns != null)
+            return field.Ns + "." + field.Name;
         return field.Name;
     }
 
     public string VisitFieldList(FieldList node)
     {
         var fields = node.Fields.Select(Visit).ToList();
+        // Fields are injected as a string list into the snippet.
         fields = fields.Select(field => "\"" + field + "\"").ToList();
         return snippetProvider.GetSnippet("fieldList",
             ("fields", string.Join(", ", fields))
@@ -79,7 +92,7 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     {
         var fields = Visit(node.Fields);
         var source = Visit(node.Source);
-        var where = node.Where != null ? Visit(node.Where) : "null";
+        var where = node.Where != null ? Visit(node.Where) : "undefined";
         return snippetProvider.GetSnippet("selectQuery",
             ("fields", fields),
             ("source", source),

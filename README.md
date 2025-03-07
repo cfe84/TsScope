@@ -31,8 +31,11 @@
 	| <FIELD> "," <FIELD>+
 
 
-<FIELD> = <IDENTIFIER>
+<FIELD> = <FIELD_IDENTIFIER>
 	| <FIELD_VALUE> "AS" <IDENTIFIER> // P2
+
+<FIELD_IDENTIFIER> ::= <IDENTIFIER>
+    | <IDENTIFIER> '.' <IDENTIFIER>
 
 <COMMENT> ::=
 	  <OC_COMMENT>
@@ -46,6 +49,8 @@
 <STRING> ::= '"' [^"] '"'
 
 <IDENTIFIER> ::= <ALPHA_NUM>
+
+
 <ALPHA_NUM> ::= [a-zA-Z_][a-zA-Z0-9_-]*
 <TEXT> ::= [^\n]*
 <EOL> ::= \n

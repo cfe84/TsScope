@@ -1,6 +1,6 @@
 input = EXTRACT id, firstName, age FROM "input.csv";
-fields = SELECT id, firstName FROM input;
-filtered = SELECT firstName, age FROM input WHERE { age > 30 };
+fields = SELECT id, firstName, age FROM input;
+filtered = SELECT firstName, age FROM fields WHERE { age > 30 };
 OUTPUT fields TO "fields.csv";
 OUTPUT input TO "input_copy.csv";
 OUTPUT filtered TO "filtered.csv";

@@ -7,7 +7,8 @@ namespace ScopeParser.Ast;
 
 public class WhereStatement(string condition) : Node {
       
-    public override T Visit<T>(INodeVisitor<T> visitor) {
+    public override T Visit<T>(INodeVisitor<T> visitor)
+    {
         return visitor.VisitWhereStatement(this);
     }
       

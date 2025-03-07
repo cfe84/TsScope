@@ -11,7 +11,7 @@ function run() {
     "FileSource": ["FieldSpec fieldSpec", "string fileName"],
     "FieldList": ["Field[] fields"],
     "Star": [],
-    "Field": ["string name"],
+    "Field": ["string name", "string? ns"],
     "Identifier": ["string value"],
     "SelectQuery": ["FieldSpec fields", "Source source", "WhereStatement? where"],
     "Output": ["Source source", "string outputFile"],
@@ -77,7 +77,8 @@ public abstract class ${name}${parameters} : ${config.parentType} {}
     fs.writeFileSync(basePath, `${header}
 public class ${name}${parameters} : ${config.parentType} {
       
-    public override T Visit<T>(I${baseName}Visitor<T> visitor) {
+    public override T Visit<T>(I${baseName}Visitor<T> visitor)
+    {
         return visitor.Visit${name}(this);
     }
       

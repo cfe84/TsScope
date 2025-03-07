@@ -7,7 +7,8 @@ namespace ScopeParser.Ast;
 
 public class Output(Source source, string outputFile) : Statement {
       
-    public override T Visit<T>(INodeVisitor<T> visitor) {
+    public override T Visit<T>(INodeVisitor<T> visitor)
+    {
         return visitor.VisitOutput(this);
     }
       

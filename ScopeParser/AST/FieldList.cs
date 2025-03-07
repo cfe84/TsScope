@@ -7,7 +7,8 @@ namespace ScopeParser.Ast;
 
 public class FieldList(Field[] fields) : FieldSpec {
       
-    public override T Visit<T>(INodeVisitor<T> visitor) {
+    public override T Visit<T>(INodeVisitor<T> visitor)
+    {
         return visitor.VisitFieldList(this);
     }
       

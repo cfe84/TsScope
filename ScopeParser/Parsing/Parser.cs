@@ -206,15 +206,22 @@ namespace ScopeParser.Parsing
         }
 
         /// <summary>
-        /// <FIELD> = <IDENTIFIER> | <FIELD_VALUE> "AS" <IDENTIFIER>
+        /// <FIELD> = <FIELD_IDENTIFIER> | <FIELD_VALUE> "AS" <IDENTIFIER>
+        /// <FIELD_IDENTIFIER> ::= <IDENTIFIER> | <IDENTIFIER> '.' <IDENTIFIER>
         /// </summary>
         /// <returns></returns>
         private Field parseField()
         {
-            var identifier = expect(TokenType.Identifier, "field identifier");
+            var identifier = expect(TokenType.Identifier, "field or source identifier");
+            if (match(TokenType.Dot))
+            {
+                var field = expect(TokenType.Identifier, "field identifier");
+                if (field == null)
+                    throw new ParseError("Expected field after dot", next());
+                return new Field(field.ValueAs<string>(), identifier.ValueAs<string>());
+            }
+            return new Field(identifier.ValueAs<string>(), null);
             // TODO: Support "AS"
-            // TODO: Support named source
-            return new Field(identifier.ValueAs<string>());
         }
 
         private void synchronize()
