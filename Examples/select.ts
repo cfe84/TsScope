@@ -140,7 +140,10 @@ const closableOutputs: IClosableOutput[] = [];
 
 const input_0 = new FileSource("input.csv", (field: string) => ["id", "firstName", "age"].includes(field));
 const fields_0 = new SelectQuerySource(input_0, (field: string) => ["id", "firstName"].includes(field), null);
-const filtered_0 = new SelectQuerySource(input_0, (field: string) => ["firstName", "age"].includes(field), (record: any) => record.age > 30);
+const filtered_0 = new SelectQuerySource(input_0, (field: string) => ["firstName", "age"].includes(field), (record: any) => {
+    Object.assign(globalThis, record);
+    return age > 30
+});
 const output_0 = new FileOutput("fields.csv");
 fields_0.registerConsumer(output_0);
 const output_1 = new FileOutput("input_copy.csv");

@@ -1,1 +1,4 @@
-(record: any) => __condition__
+(record: any) => {
+    Object.assign(globalThis, record);
+    return __condition__
+}
