@@ -1,13 +1,25 @@
 import * as fs from "fs";
 import * as path from "path";
 
-interface IConsumer {
-  receiveRecord(record: Record<string, any>): void;
-  receiveSchema(schema: string[]): void;
+interface QualifiedName {
+  name: string;
+  namespace?: string;
 }
 
-type FieldsFilter = (field: string) => boolean;
-type RecordFilter = (record: Record<string, any>) => boolean;
+interface Field {
+  name: QualifiedName;
+  value: string;
+}
+
+type Record = Field[];
+
+interface IConsumer {
+  receiveRecord(record: Record): void;
+  receiveSchema(schema: QualifiedName[]): void;
+}
+
+type FieldsFilter = (field: QualifiedName) => boolean;
+type RecordFilter = (record: Record) => boolean;
 
 abstract class Source {
   private consumers: IConsumer[] = [];
@@ -16,11 +28,11 @@ abstract class Source {
     this.consumers.push(consumer);
   }
 
-  protected notifyConsumers(record: Record<string, any>): void {
+  protected notifyConsumers(record: Record): void {
     this.consumers.forEach((consumer) => consumer.receiveRecord(record));
   }
 
-  protected notifyConsumersSchema(schema: string[]): void {
+  protected notifyConsumersSchema(schema: QualifiedName[]): void {
     this.consumers.forEach((consumer) => consumer.receiveSchema(schema));
   }
 }
@@ -30,7 +42,7 @@ interface IStartable {
 }
 
 class FileSource extends Source implements IStartable {
-  private fields: string[] = [];
+  private fields: QualifiedName[] = [];
 
   constructor(filePath: string, private filter: FieldsFilter) {
     super();
@@ -66,16 +78,24 @@ class FileSource extends Source implements IStartable {
     const valuesInLine = this.aggregate.split(",");
     if (this.fields.length === 0) {
       // first line, extract fields
-      this.fields = valuesInLine;
+      this.fields = valuesInLine.map((field) => ({
+        name: field,
+        namespace: undefined,
+      }));
       this.notifyConsumersSchema(this.fields.filter(this.filter));
     } else {
-      const record: Record<string, any> = {};
-      this.fields.forEach((field, index) => {
-        if (!this.filter(field)) {
-          return;
-        }
-        record[field] = valuesInLine[index];
-      });
+      const record = this.fields
+        .map((field, index) => {
+          if (!this.filter(field)) {
+            return;
+          }
+          const value = valuesInLine[index];
+          return {
+            name: field,
+            value: value,
+          };
+        })
+        .filter((field) => field !== undefined);
       this.notifyConsumers(record);
     }
   }
@@ -93,21 +113,42 @@ class SelectQuerySource extends Source implements IConsumer {
     source.registerConsumer(this);
   }
 
-  receiveSchema(schema: string[]): void {
+  receiveSchema(schema: QualifiedName[]): void {
     this.notifyConsumersSchema(
       schema.filter((field) => this.fieldsFilter(field))
     );
   }
 
-  receiveRecord(record: Record<string, any>): void {
+  receiveRecord(record: Record): void {
     if (this.where && !this.where(record)) {
       return;
     }
-    this.notifyConsumers(
-      Object.fromEntries(
-        Object.entries(record).filter(([field]) => this.fieldsFilter(field))
-      )
-    );
+    const result = record.filter((field) => this.fieldsFilter(field.name));
+
+    this.notifyConsumers(result);
+  }
+}
+
+class NamedSource extends Source implements IConsumer {
+  constructor(private source: Source, private name: string) {
+    super();
+    source.registerConsumer(this);
+  }
+
+  receiveRecord(record: Record): void {
+    const newRecord = record.map((field) => ({
+      name: { ...field.name, namespace: this.name },
+      value: field.value,
+    }));
+    this.notifyConsumers(newRecord);
+  }
+
+  receiveSchema(schema: QualifiedName[]): void {
+    const newSchema = schema.map((field) => ({
+      ...field,
+      namespace: this.name,
+    }));
+    this.notifyConsumersSchema(newSchema);
   }
 }
 
@@ -118,12 +159,18 @@ interface IClosableOutput {
 class FileOutput implements IConsumer, IClosableOutput {
   constructor(private filePath: string) {}
 
-  receiveRecord(record: Record<string, any>): void {
-    fs.appendFileSync(this.filePath, Object.values(record).join(",") + "\n");
+  receiveRecord(record: Record): void {
+    fs.appendFileSync(
+      this.filePath,
+      record.map((field) => field.value).join(",") + "\n"
+    );
   }
 
-  receiveSchema(schema: string[]): void {
-    fs.writeFileSync(this.filePath, schema.join(",") + "\n");
+  receiveSchema(schema: QualifiedName[]): void {
+    fs.writeFileSync(
+      this.filePath,
+      schema.map((field) => field.name).join(",") + "\n"
+    );
   }
 
   close(): void {}

@@ -1,1 +1,1 @@
-(_: string) => true
+(_: QualifiedName) => true

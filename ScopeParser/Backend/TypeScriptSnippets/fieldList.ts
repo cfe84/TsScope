@@ -1,1 +1,1 @@
-(field: string) => [__fields__].includes(field)
+(field: QualifiedName) => [__fields__].includes(field.name) || [__fields__].includes(`${field.namespace}.${field.name}`)

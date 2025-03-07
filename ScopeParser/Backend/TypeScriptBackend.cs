@@ -31,7 +31,8 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         var variableName = Visit(assignment.VariableName);
         return snippetProvider.GetSnippet("assignment",
             ("variableName", variableName),
-            ("source", source)
+            ("source", source),
+            ("name", assignment.VariableName.Value) // Passed to name the source
         );
     }
 

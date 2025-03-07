@@ -1,1 +1,1 @@
-const /*%variableName%*/ = /*%source%*/;
+const __variableName__ = new NamedSource(__source__, "__name__");
