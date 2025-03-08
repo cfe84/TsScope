@@ -2,6 +2,7 @@ namespace ScopeParser.Backend;
 
 using System.Text.RegularExpressions;
 using ScopeParser.Ast;
+using ScopeParser.Lexing;
 
 public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<string>
 {
@@ -58,7 +59,9 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         // Fields are injected as a string list into the snippet.
         fields = fields.Select(field => "\"" + field + "\"").ToList();
         return snippetProvider.GetSnippet("fieldList",
-            ("fields", string.Join(", ", fields))
+            ("fields", string.Join(", ", fields)),
+            // Todo: This could be refined to give the exact position of the missing field.
+            ("position", node.Token.ToString().Replace("\"", "\\\""))
         );
     }
 

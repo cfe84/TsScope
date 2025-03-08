@@ -4,7 +4,7 @@
     missingFields: (fields: QualifiedName[]) => {
         const fieldNames = fields.map((field) => field.name);
         const qualifiedNames = fields.map((field) => field.namespace + "." + field.name);
-        const fieldCheckResult = [__fields__].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
-        return fieldCheckResult;
+        const result = [__fields__].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
+        return { result, position: "__position__" };
     }
 }

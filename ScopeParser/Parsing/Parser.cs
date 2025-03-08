@@ -32,7 +32,7 @@ namespace ScopeParser.Parsing
                     synchronize();
                 }
             }
-            return new Script(statements.ToArray());
+            return new Script(tokens[0], statements.ToArray());
         }
 
         /// <summary>
@@ -59,6 +59,7 @@ namespace ScopeParser.Parsing
         /// <exception cref="ParseError"></exception>
         private Assignment? parseAssignment()
         {
+            var token = peek();
             var identifier = parseIdentifier(false);
             if (identifier == null)
                 return null;
@@ -66,7 +67,7 @@ namespace ScopeParser.Parsing
                 throw new ParseError("Expected '=' after identifier", next());
             var source = parseSource();
             expect(TokenType.SemiColon, ";");
-            return new Assignment(identifier, source);
+            return new Assignment(token, identifier, source);
         }
 
         /// <summary>
@@ -77,12 +78,13 @@ namespace ScopeParser.Parsing
         {
             if (match(TokenType.Output))
             {
+                var token = previous();
                 var source = parseSource();
                 expect(TokenType.To, "TO");
                 // TODO: Support variable name as well.
                 var outputFile = expect(TokenType.String, "filename");
                 expect(TokenType.SemiColon, ";");
-                return new Output(source, outputFile.ValueAs<string>());
+                return new Output(token, source, outputFile.ValueAs<string>());
             }
             return null;
         }
@@ -92,7 +94,7 @@ namespace ScopeParser.Parsing
             if (match(TokenType.Identifier))
             {
                 var token = previous();
-                return new Identifier(token.ValueAs<string>());
+                return new Identifier(token, token.ValueAs<string>());
             }
             else if (throwOnFail)
             {
@@ -125,11 +127,12 @@ namespace ScopeParser.Parsing
         {
             if (match(TokenType.Extract))
             {
+                var token = previous();
                 var fieldSpec = parseFieldSpec();
                 expect(TokenType.From, "FROM");
                 // TODO: Support variable name as well.
                 var filename = expect(TokenType.String, "a string with filename");
-                return new FileSource(fieldSpec, filename.ValueAs<string>());
+                return new FileSource(token, fieldSpec, filename.ValueAs<string>());
             }
             return null;
         }
@@ -143,11 +146,12 @@ namespace ScopeParser.Parsing
         {
             if (match(TokenType.Select))
             {
+                var token = previous();
                 var fieldSpec = parseFieldSpec();
                 expect(TokenType.From, "FROM");
                 var source = parseSource();
                 var where = parseWhereStatement();
-                return new SelectQuery(fieldSpec, source, where);
+                return new SelectQuery(token, fieldSpec, source, where);
             }
             return null;
         }
@@ -161,8 +165,9 @@ namespace ScopeParser.Parsing
         {
             if (match(TokenType.Where))
             {
+                var token = previous();
                 var expression = expect(TokenType.TsExpression, "a valid TS expression");
-                return new WhereStatement(expression.ValueAs<string>());
+                return new WhereStatement(token, expression.ValueAs<string>());
             }
             return null;
         }
@@ -184,7 +189,7 @@ namespace ScopeParser.Parsing
         private Star? parseStar()
         {
             if (match(TokenType.Star))
-                return new Star();
+                return new Star(previous());
             return null;
         }
 
@@ -194,6 +199,7 @@ namespace ScopeParser.Parsing
         /// <returns></returns>
         private FieldList parseFieldList()
         {
+            var token = peek();
             var fields = new List<Field>
             {
                 parseField()
@@ -202,7 +208,7 @@ namespace ScopeParser.Parsing
             {
                 fields.Add(parseField());
             }
-            return new FieldList(fields.ToArray());
+            return new FieldList(token, fields.ToArray());
         }
 
         /// <summary>
@@ -212,15 +218,16 @@ namespace ScopeParser.Parsing
         /// <returns></returns>
         private Field parseField()
         {
+            var token = peek();
             var identifier = expect(TokenType.Identifier, "field or source identifier");
             if (match(TokenType.Dot))
             {
                 var field = expect(TokenType.Identifier, "field identifier");
                 if (field == null)
                     throw new ParseError("Expected field after dot", next());
-                return new Field(field.ValueAs<string>(), identifier.ValueAs<string>());
+                return new Field(token, field.ValueAs<string>(), identifier.ValueAs<string>());
             }
-            return new Field(identifier.ValueAs<string>(), null);
+            return new Field(token, identifier.ValueAs<string>(), null);
             // TODO: Support "AS"
         }
 

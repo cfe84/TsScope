@@ -216,7 +216,32 @@ const closableOutputs: IClosableOutput[] = [];
 //                                           //
 ///////////////////////////////////////////////
 
-/*%statements%*/
+const input_0 = new NamedSource(new FileSource("input.csv", {
+    fieldFilter: (_: QualifiedName) => true,
+    missingFields: (_: QualifiedName[]) => ({result: [], position: ""}),
+}), "input");
+const fields_0 = new NamedSource(new SelectQuerySource(input_0, {
+    fieldFilter: (field: QualifiedName) => ["id", "firstName"]
+        .includes(field.name) || ["id", "firstName"].includes(`${field.namespace}.${field.name}`),
+    missingFields: (fields: QualifiedName[]) => {
+        const fieldNames = fields.map((field) => field.name);
+        const qualifiedNames = fields.map((field) => field.namespace + "." + field.name);
+        const result = ["id", "firstName"].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
+        return { result, position: "Identifier \"id\" (line 2, column 17)" };
+    }
+}, undefined), "fields");
+const fields_1 = new NamedSource(new SelectQuerySource(fields_0, {
+    fieldFilter: (field: QualifiedName) => ["fields.id", "firstName", "age"]
+        .includes(field.name) || ["fields.id", "firstName", "age"].includes(`${field.namespace}.${field.name}`),
+    missingFields: (fields: QualifiedName[]) => {
+        const fieldNames = fields.map((field) => field.name);
+        const qualifiedNames = fields.map((field) => field.namespace + "." + field.name);
+        const result = ["fields.id", "firstName", "age"].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
+        return { result, position: "Identifier \"fields\" (line 3, column 17)" };
+    }
+}, undefined), "fields");
+const output_0 = new FileOutput("fields.csv");
+fields_1.registerConsumer(output_0);
 
 ///////////////////////////////////////////////
 //                                           //

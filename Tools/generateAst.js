@@ -55,6 +55,7 @@ const header = `// This file is auto-generated. Do not modify it directly.
 // Instead, use the generateAst.js script in Tools.
 // Example usage: node Tools/generateAst.js ScopeParser/AST
 using System;
+using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 `;
@@ -68,10 +69,10 @@ function createType(outputDirectory, name, config, baseName) {
     return `    public ${type} ${capitalizedName} => ${name};`;
   }
 
-  const parameters = config.fields.length > 0 ? `(${config.fields.join(', ')})` : '';
+  const parameters = `(${["Token token"].concat(config.fields).join(', ')})`;
   if (config.isComposite) {
     fs.writeFileSync(basePath, `${header}
-public abstract class ${name}${parameters} : ${config.parentType} {}
+public abstract class ${name} : ${config.parentType} {}
 `);
   } else {
     fs.writeFileSync(basePath, `${header}
@@ -81,6 +82,8 @@ public class ${name}${parameters} : ${config.parentType} {
     {
         return visitor.Visit${name}(this);
     }
+
+    public override Token Token => token;
       
 ${config.fields.map(field => generateFieldGetter(field)).join('\n\n')}
 }
@@ -93,6 +96,7 @@ function createBaseNode(outputDirectory, baseName) {
   fs.writeFileSync(basePath, `${header}
 public abstract class ${baseName} {
     public abstract T Visit<T>(I${baseName}Visitor<T> visitor);
+    public abstract Token Token { get; }
 }
 `);
 }
