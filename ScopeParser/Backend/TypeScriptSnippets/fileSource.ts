@@ -1,1 +1,1 @@
-new FileSource("/*%filename%*/", /*%fieldSpec%*/)
+new FileSource("/*%filename%*/", __fieldSpec__)

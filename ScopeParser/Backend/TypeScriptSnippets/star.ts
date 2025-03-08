@@ -1,1 +1,4 @@
-(_: QualifiedName) => true
+{
+    fieldFilter: (_: QualifiedName) => true,
+    missingFields: (_: QualifiedName[]) => [],
+}

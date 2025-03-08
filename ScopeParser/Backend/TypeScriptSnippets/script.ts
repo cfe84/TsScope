@@ -11,6 +11,11 @@ interface Field {
   value: string;
 }
 
+interface FieldsSpec {
+  fieldFilter: (field: QualifiedName) => boolean;
+  missingFields: (field: QualifiedName[]) => string[];
+}
+
 type Record = Field[];
 
 interface IConsumer {
@@ -18,7 +23,10 @@ interface IConsumer {
   receiveSchema(schema: QualifiedName[]): void;
 }
 
+// Check if field should be included
 type FieldsFilter = (field: QualifiedName) => boolean;
+// Check if all the fields we're expecting are in the list.
+type FieldCheck = (field: QualifiedName[]) => string | true;
 type RecordFilter = (record: Record) => boolean;
 
 abstract class Source {
@@ -44,7 +52,7 @@ interface IStartable {
 class FileSource extends Source implements IStartable {
   private fields: QualifiedName[] = [];
 
-  constructor(filePath: string, private filter: FieldsFilter) {
+  constructor(filePath: string, private fieldsSpec: FieldsSpec) {
     super();
     this.file = fs.createReadStream(filePath);
     startable.push(this);
@@ -82,11 +90,19 @@ class FileSource extends Source implements IStartable {
         name: field,
         namespace: undefined,
       }));
-      this.notifyConsumersSchema(this.fields.filter(this.filter));
+      const missingFields = this.fieldsSpec.missingFields(this.fields);
+      if (missingFields.length > 0) {
+        throw new Error(
+          "Missing field(s) in source: " + missingFields.join(", ")
+        );
+      }
+      this.notifyConsumersSchema(
+        this.fields.filter(this.fieldsSpec.fieldFilter)
+      );
     } else {
       const record = this.fields
         .map((field, index) => {
-          if (!this.filter(field)) {
+          if (!this.fieldsSpec.fieldFilter(field)) {
             return;
           }
           const value = valuesInLine[index];
@@ -106,7 +122,7 @@ class FileSource extends Source implements IStartable {
 class SelectQuerySource extends Source implements IConsumer {
   constructor(
     private source: Source,
-    private fieldsFilter: FieldsFilter,
+    private fieldsSpec: FieldsSpec,
     private where?: RecordFilter
   ) {
     super();
@@ -114,8 +130,14 @@ class SelectQuerySource extends Source implements IConsumer {
   }
 
   receiveSchema(schema: QualifiedName[]): void {
+    const missingFields = this.fieldsSpec.missingFields(schema);
+    if (missingFields.length > 0) {
+      throw new Error(
+        "Missing field(s) in source: " + missingFields.join(", ")
+      );
+    }
     this.notifyConsumersSchema(
-      schema.filter((field) => this.fieldsFilter(field))
+      schema.filter((field) => this.fieldsSpec.fieldFilter(field))
     );
   }
 
@@ -123,7 +145,9 @@ class SelectQuerySource extends Source implements IConsumer {
     if (this.where && !this.where(record)) {
       return;
     }
-    const result = record.filter((field) => this.fieldsFilter(field.name));
+    const result = record.filter((field) =>
+      this.fieldsSpec.fieldFilter(field.name)
+    );
 
     this.notifyConsumers(result);
   }

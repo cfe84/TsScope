@@ -24,6 +24,7 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitAssignment(Assignment assignment)
     {
+        var source = Visit(assignment.Source);
         // We keep track of variable reuse. Variables are renamed variableName_0, variableName_1, etc.
         // This is to avoid name collisions in the generated code.
         // Technically we could just reuse the same variable, but this is easier to read.
@@ -35,8 +36,6 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         {
             variableCount[assignment.VariableName.Value]++;
         }
-
-        var source = Visit(assignment.Source);
         var variableName = Visit(assignment.VariableName);
         return snippetProvider.GetSnippet("assignment",
             ("variableName", variableName),

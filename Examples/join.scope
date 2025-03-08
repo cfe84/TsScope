@@ -1,4 +1,4 @@
 input = EXTRACT * FROM "input.csv";
-fields = SELECT id, firstName, age FROM input;
-fields = SELECT input.id, firstName FROM input;
+fields = SELECT id, firstName,age FROM input;
+fields = SELECT fields.id, firstName, age FROM fields;
 OUTPUT fields TO "fields.csv";
