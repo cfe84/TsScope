@@ -149,9 +149,42 @@ namespace ScopeParser.Parsing
                 var token = previous();
                 var fieldSpec = parseFieldSpec();
                 expect(TokenType.From, "FROM");
-                var source = parseSource();
+                var source = ParseSelectSource();
                 var where = parseWhereStatement();
                 return new SelectQuery(token, fieldSpec, source, where);
+            }
+            return null;
+        }
+
+        private SelectSource ParseSelectSource()
+        {
+            var source = parseSource();
+            var join = parseJoinQuery(source);
+            if (join != null)
+            {
+                return join;
+            }
+            return source;
+        }
+
+        private JoinQuery? parseJoinQuery(SelectSource left)
+        {
+            if (match(TokenType.Left, TokenType.Right, TokenType.Inner, TokenType.Outer))
+            {
+                var joinTypeToken = previous();
+                var joinType = joinTypeToken.TokenType switch
+                {
+                    TokenType.Left => JoinType.Left,
+                    TokenType.Right => JoinType.Right,
+                    TokenType.Inner => JoinType.Inner,
+                    TokenType.Outer => JoinType.Outer,
+                    _ => throw new ParseError("Invalid join type", joinTypeToken)
+                };
+                expect(TokenType.Join, "JOIN");
+                var right = parseSource();
+                expect(TokenType.On, "ON");
+                var condition = expect(TokenType.TsExpression, "a valid TS expression");
+                return new JoinQuery(joinTypeToken, left, right, joinType, condition.ValueAs<string>());
             }
             return null;
         }
@@ -257,10 +290,10 @@ namespace ScopeParser.Parsing
             return previous();
         }
 
-        private bool match(TokenType type)
+        private bool match(params TokenType[] types)
         {
             if (isAtEnd() ||
-                tokens[current].TokenType != type)
+                !types.Contains(tokens[current].TokenType))
                 return false;
             next();
             return true;

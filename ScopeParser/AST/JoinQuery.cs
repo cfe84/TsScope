@@ -6,19 +6,21 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class SelectQuery(Token token, FieldSpec fields, SelectSource source, WhereStatement? where) : Source {
+public class JoinQuery(Token token, SelectSource left, Source right, JoinType joinType, string condition) : SelectSource {
       
     public override T Visit<T>(INodeVisitor<T> visitor)
     {
-        return visitor.VisitSelectQuery(this);
+        return visitor.VisitJoinQuery(this);
     }
 
     public override Token Token => token;
       
-    public FieldSpec Fields => fields;
+    public SelectSource Left => left;
 
-    public SelectSource Source => source;
+    public Source Right => right;
 
-    public WhereStatement? Where => where;
+    public JoinType JoinType => joinType;
+
+    public string Condition => condition;
 }
       

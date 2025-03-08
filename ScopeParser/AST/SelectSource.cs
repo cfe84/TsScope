@@ -6,4 +6,4 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public abstract class Source : SelectSource {}
+public abstract class SelectSource : Node {}

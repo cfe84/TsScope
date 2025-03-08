@@ -118,4 +118,13 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
             ("condition", node.Condition)
         );
     }
+
+    public string VisitJoinQuery(JoinQuery node)
+    {
+        return snippetProvider.GetSnippet("joinQuery",
+            ("source1", Visit(node.Left)),
+            ("source2", Visit(node.Right)),
+            ("condition", node.Condition)
+        );
+    }
 }

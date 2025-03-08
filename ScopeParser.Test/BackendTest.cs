@@ -15,7 +15,7 @@ public class BackendTest
     {
         // Given
         var statements = new Statement[] { };
-        var script = new Script(statements);
+        var script = new Script(new Token(TokenType.EndOfFile, null, 0, 0), statements);
         var snippetProvider = new Mock<ISnippetProvider>();
         snippetProvider.Setup(x => x.GetSnippet("script", It.Is<(string key, string value)>(o => o.key == "statements" && o.value == "")))
             .Returns("script");

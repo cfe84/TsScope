@@ -13,12 +13,14 @@ function run() {
     "Star": [],
     "Field": ["string name", "string? ns"],
     "Identifier": ["string value"],
-    "SelectQuery": ["FieldSpec fields", "Source source", "WhereStatement? where"],
+    "SelectQuery": ["FieldSpec fields", "SelectSource source", "WhereStatement? where"],
     "Output": ["Source source", "string outputFile"],
+    "JoinQuery": ["SelectSource left", "Source right", "JoinType joinType", "string condition"],
   };
   const compositeTypes = {
     "Statement": ["Assignment", "Output"],
     "Source": ["FileSource", "SelectQuery", "Identifier"],
+    "SelectSource": ["Source", "JoinQuery"],
     "FieldSpec": ["FieldList", "Star"],
   };
   const types = {};
@@ -28,7 +30,8 @@ function run() {
     types[type] = { parentType, fields, isComposite: false };
   };
   for (const type of Object.keys(compositeTypes)) {
-    const parentType = "Node";
+    const compositedIn = Object.keys(compositeTypes).find(key => compositeTypes[key].indexOf(type) >= 0);
+    const parentType = compositedIn || "Node";
     types[type] = { parentType, fields: [], isComposite: true };
   }
   createAst(outputDirectory, "Node", types);

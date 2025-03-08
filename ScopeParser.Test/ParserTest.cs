@@ -263,6 +263,53 @@ public class ParserTest
     }
 
     [Fact]
+    public void TestJoin()
+    {
+        // Given
+        var source = new List<Token> {
+            new Token(TokenType.Identifier, "output", 1, 1),
+            fromTokenType(TokenType.Equal),
+            fromTokenType(TokenType.Select),
+            new Token(TokenType.Identifier, "input", 1, 2),
+            fromTokenType(TokenType.Dot),
+            new Token(TokenType.Identifier, "field_name", 1, 2),
+            fromTokenType(TokenType.Comma),
+            new Token(TokenType.Identifier, "field_name_2", 1, 3),
+            fromTokenType(TokenType.From),
+            new Token(TokenType.Identifier, "input", 1, 4),
+            fromTokenType(TokenType.Inner),
+            fromTokenType(TokenType.Join),
+            new Token(TokenType.Identifier, "input_2", 1, 5),
+            fromTokenType(TokenType.On),
+            new Token(TokenType.TsExpression, "filter_1", 1, 6),
+            fromTokenType(TokenType.Outer),
+            fromTokenType(TokenType.Join),
+            new Token(TokenType.Identifier, "input_3", 1, 5),
+            fromTokenType(TokenType.On),
+            new Token(TokenType.TsExpression, "filter_2", 1, 6),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script);
+        var assignment = validateAssignment(script.Statements[0], "output");
+        var select = validateSelectQuery(assignment.Source);
+        validateFields(select.Fields, ("input", "field_name"), (null, "field_name_2"));
+        var secondJoin = validateJoinQuery(select.Source);
+        var firstJoin = validateJoinQuery(secondJoin.Left);
+        validateIdentifierSource(firstJoin.Left, "input");
+        validateIdentifierSource(firstJoin.Right, "input_2");
+        firstJoin.Condition.Should().Be("filter_1");
+        validateIdentifierSource(secondJoin.Right, "input_3");
+        secondJoin.Condition.Should().Be("filter_2");
+    }
+
+    [Fact]
     public void TestSelectWhere()
     {
         // Given
@@ -339,7 +386,13 @@ public class ParserTest
         return (WhereStatement)selectQuery.Where;
     }
 
-    private Identifier validateIdentifierSource(Source source, string expected)
+    private JoinQuery validateJoinQuery(SelectSource source)
+    {
+        source.Should().BeOfType<JoinQuery>();
+        return (JoinQuery)source;
+    }
+
+    private Identifier validateIdentifierSource(SelectSource source, string expected)
     {
         source.Should().BeOfType<Identifier>();
         var identifier = (Identifier)source;
