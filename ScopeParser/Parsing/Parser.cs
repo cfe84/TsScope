@@ -156,6 +156,9 @@ namespace ScopeParser.Parsing
             return null;
         }
 
+        /// <summary>
+        /// <SELECT_SOURCE> = <JOIN_QUERY> | <SOURCE>
+        /// </summary>
         private SelectSource ParseSelectSource()
         {
             var source = parseSource();
@@ -166,8 +169,14 @@ namespace ScopeParser.Parsing
             return join;
         }
 
+        /// <summary>
+        /// <JOIN_QUERY> = <SELECT_SOURCE> <JOIN_TYPE> <SOURCE> "ON" <TS_EXPRESSION>
+        /// </summary>
         private SelectSource parseJoinQuery(SelectSource left)
         {
+            // Parsing Join is a bit different, since it's left recursive.
+            // They're not nested.
+            // We use iteration instead of recursion to parse the join.
             while (match(TokenType.Left, TokenType.Right, TokenType.Inner, TokenType.Outer))
             {
                 var joinTypeToken = previous();
