@@ -159,17 +159,16 @@ namespace ScopeParser.Parsing
         private SelectSource ParseSelectSource()
         {
             var source = parseSource();
+            // Parsing join is different because it's
+            // right associative. This method returns source
+            // if no join is found.
             var join = parseJoinQuery(source);
-            if (join != null)
-            {
-                return join;
-            }
-            return source;
+            return join;
         }
 
-        private JoinQuery? parseJoinQuery(SelectSource left)
+        private SelectSource parseJoinQuery(SelectSource left)
         {
-            if (match(TokenType.Left, TokenType.Right, TokenType.Inner, TokenType.Outer))
+            while (match(TokenType.Left, TokenType.Right, TokenType.Inner, TokenType.Outer))
             {
                 var joinTypeToken = previous();
                 var joinType = joinTypeToken.TokenType switch
@@ -184,9 +183,9 @@ namespace ScopeParser.Parsing
                 var right = parseSource();
                 expect(TokenType.On, "ON");
                 var condition = expect(TokenType.TsExpression, "a valid TS expression");
-                return new JoinQuery(joinTypeToken, left, right, joinType, condition.ValueAs<string>());
+                left = new JoinQuery(joinTypeToken, left, right, joinType, condition.ValueAs<string>());
             }
-            return null;
+            return left;
         }
 
         /// <summary>

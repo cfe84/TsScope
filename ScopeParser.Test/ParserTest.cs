@@ -263,7 +263,46 @@ public class ParserTest
     }
 
     [Fact]
-    public void TestJoin()
+    public void TestOneJoin()
+    {
+        // Given
+        var source = new List<Token> {
+            new Token(TokenType.Identifier, "output", 1, 1),
+            fromTokenType(TokenType.Equal),
+            fromTokenType(TokenType.Select),
+            new Token(TokenType.Identifier, "input", 1, 2),
+            fromTokenType(TokenType.Dot),
+            new Token(TokenType.Identifier, "field_name", 1, 2),
+            fromTokenType(TokenType.Comma),
+            new Token(TokenType.Identifier, "field_name_2", 1, 3),
+            fromTokenType(TokenType.From),
+            new Token(TokenType.Identifier, "input", 1, 4),
+            fromTokenType(TokenType.Inner),
+            fromTokenType(TokenType.Join),
+            new Token(TokenType.Identifier, "input_2", 1, 5),
+            fromTokenType(TokenType.On),
+            new Token(TokenType.TsExpression, "filter", 1, 6),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script);
+        var assignment = validateAssignment(script.Statements[0], "output");
+        var select = validateSelectQuery(assignment.Source);
+        validateFields(select.Fields, ("input", "field_name"), (null, "field_name_2"));
+        var join = validateJoinQuery(select.Source);
+        validateIdentifierSource(join.Left, "input");
+        validateIdentifierSource(join.Right, "input_2");
+        join.Condition.Should().Be("filter");
+    }
+
+    [Fact]
+    public void TestMultiJoin()
     {
         // Given
         var source = new List<Token> {
