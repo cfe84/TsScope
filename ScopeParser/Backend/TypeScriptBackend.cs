@@ -125,9 +125,8 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         var tsExpression = Visit(node.Condition);
         var condition = snippetProvider.GetSnippet("joinCondition",
             ("name", conditionName),
-            ("left", node.Left.GetType() == typeof(Identifier) ? ((Identifier)node.Left).Value : "_left"),
-            ("right", node.Right.GetType() == typeof(Identifier) ? ((Identifier)node.Right).Value : "_right"),
-            ("condition", tsExpression)
+            ("condition", tsExpression),
+            ("token", node.Token.ToString())
         );
         conditions.Add(condition);
         return snippetProvider.GetSnippet("joinQuery",

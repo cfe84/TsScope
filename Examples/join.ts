@@ -26,6 +26,34 @@ const star: FieldsSpec = {
 
 type Record = Field[];
 
+function recordToObject(record: Record): { [key: string]: any } {
+  const obj: { [key: string]: any } = {};
+  // We give precedence to namespaces. If a field is conflicting
+  // with a namespace, it should be ignored.
+  for (const field of record) {
+    if (field.name.namespace && !(field.name.namespace in obj)) {
+      obj[field.name.namespace] = {};
+    }
+  }
+
+  // Assign to root. We keep only the first value. If two fields are
+  // conflicting, we should return a warning.
+  for (const field of record) {
+    if (!(field.name.name in obj)) {
+      obj[field.name.name] = field.value;
+    } else {
+      // TODO: Handle conflicts better.
+    }
+  }
+  // Assign to namespace if typed.
+  for (const field of record) {
+    if (field.name.namespace) {
+      obj[field.name.namespace][field.name.name] = field.value;
+    }
+  }
+  return obj;
+}
+
 interface IConsumer {
   receiveRecord(source: Source, record: Record): void;
   receiveSchema(source: Source, schema: QualifiedName[]): void;
@@ -211,7 +239,7 @@ enum JoinType {
   Right = "Right",
 }
 
-type JoinCondition = (left: Record, right: Record, record: Record) => boolean;
+type JoinCondition = (record: Record) => boolean;
 
 // This can be heavily optimized. A proper join algorithm should be used.
 // This is a naive implementation that just iterates over the records and saves
@@ -276,7 +304,7 @@ class JoinSource extends Source implements IConsumer {
     for (const leftRecord of this.leftRecords) {
       for (const rightRecord of this.rightRecords) {
         const fullRecord = [...leftRecord, ...rightRecord];
-        if (this.condition(leftRecord, rightRecord, fullRecord)) {
+        if (this.condition(fullRecord)) {
           this.notifyConsumers(fullRecord);
         }
       }
@@ -321,19 +349,19 @@ const closableOutputs: IClosableOutput[] = [];
 //                                           //
 ///////////////////////////////////////////////
 
-function condition_0(people_in, roles_in, record) {
-  // TODO: Should use namespace instead of the left/right names.
-  const people: any = {};
-  const roles: any = {};
-  for (const field of people_in) {
-    people[field.name.name] = field.value;
-  }
-  for (const field of roles_in) {
-    roles[field.name.name] = field.value;
-  }
+function condition_0(record) {
+  record = recordToObject(record);
+  Object.assign(globalThis, record);
   const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    // @ts-ignore
-people.roleId === roles.id;
+    country.countryCode === input.country;
+  return res;
+}
+
+function condition_1(record) {
+  record = recordToObject(record);
+  Object.assign(globalThis, record);
+  const res = // Condition must be on new line to accomodate for the tsIgnore flag
+    input.roleId === roles.id;
   return res;
 }
 
@@ -350,9 +378,9 @@ const people_0 = new NamedSource(new SelectQuerySource(input_0, {
         return { result, position: "Identifier \"id\" (line 4, column 17)" };
     }
 }, undefined), "people");
-const combined_0 = new NamedSource(new SelectQuerySource(new JoinSource(people_0, roles_0, condition_0, JoinType.Inner), star, undefined), "combined");
-const output_0 = new FileOutput("join_output.csv");
-combined_0.registerConsumer(output_0);
+const withCountry_0 = new NamedSource(new SelectQuerySource(new JoinSource(new JoinSource(input_0, roles_0, condition_1, JoinType.Inner), country_0, condition_0, JoinType.Inner), star, undefined), "withCountry");
+const output_0 = new FileOutput("join_two_joins.csv");
+withCountry_0.registerConsumer(output_0);
 
 ///////////////////////////////////////////////
 //                                           //

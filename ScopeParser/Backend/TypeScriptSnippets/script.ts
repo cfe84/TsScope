@@ -28,15 +28,25 @@ type Record = Field[];
 
 function recordToObject(record: Record): { [key: string]: any } {
   const obj: { [key: string]: any } = {};
-  // Assign to root.
-  for (const field of record) {
-    obj[field.name.name] = field.value;
-  }
-  // Assign to namespace if typed.
+  // We give precedence to namespaces. If a field is conflicting
+  // with a namespace, it should be ignored.
   for (const field of record) {
     if (field.name.namespace && !(field.name.namespace in obj)) {
       obj[field.name.namespace] = {};
     }
+  }
+
+  // Assign to root. We keep only the first value. If two fields are
+  // conflicting, we should return a warning.
+  for (const field of record) {
+    if (!(field.name.name in obj)) {
+      obj[field.name.name] = field.value;
+    } else {
+      // TODO: Handle conflicts better.
+    }
+  }
+  // Assign to namespace if typed.
+  for (const field of record) {
     if (field.name.namespace) {
       obj[field.name.namespace][field.name.name] = field.value;
     }
@@ -229,7 +239,7 @@ enum JoinType {
   Right = "Right",
 }
 
-type JoinCondition = (left: Record, right: Record, record: Record) => boolean;
+type JoinCondition = (record: Record) => boolean;
 
 // This can be heavily optimized. A proper join algorithm should be used.
 // This is a naive implementation that just iterates over the records and saves
@@ -294,7 +304,7 @@ class JoinSource extends Source implements IConsumer {
     for (const leftRecord of this.leftRecords) {
       for (const rightRecord of this.rightRecords) {
         const fullRecord = [...leftRecord, ...rightRecord];
-        if (this.condition(leftRecord, rightRecord, fullRecord)) {
+        if (this.condition(fullRecord)) {
           this.notifyConsumers(fullRecord);
         }
       }

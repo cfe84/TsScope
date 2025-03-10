@@ -1,14 +1,6 @@
-function __name__(__left___in, __right___in, record) {
-  // TODO: Should use namespace instead of the left/right names.
+function __name__(record) {
   record = recordToObject(record);
-  const __left__: any = {};
-  const __right__: any = {};
-  for (const field of __left___in) {
-    __left__[field.name.name] = field.value;
-  }
-  for (const field of __right___in) {
-    __right__[field.name.name] = field.value;
-  }
+  Object.assign(globalThis, record);
   const res = // Condition must be on new line to accomodate for the tsIgnore flag
     __condition__;
   return res;
