@@ -63,8 +63,7 @@ namespace ScopeParser.Parsing
             var identifier = parseIdentifier(false);
             if (identifier == null)
                 return null;
-            if (!match(TokenType.Equal))
-                throw new ParseError("Expected '=' after identifier", next());
+            expect(TokenType.Equal, "=");
             var source = parseSource();
             expect(TokenType.SemiColon, ";");
             return new Assignment(token, identifier, source);

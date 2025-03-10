@@ -370,10 +370,12 @@ const roles_0 = new NamedSource(new FileSource("role.csv", star), "roles");
 const country_0 = new NamedSource(new FileSource("country.csv", star), "country");
 const people_0 = new NamedSource(new SelectQuerySource(input_0, {
     fieldFilter: (field: QualifiedName) => ["id", "firstName", "roleId"]
+        // TODO: Fix for namespace 
         .includes(field.name) || ["id", "firstName", "roleId"].includes(`${field.namespace}.${field.name}`),
     missingFields: (fields: QualifiedName[]) => {
         const fieldNames = fields.map((field) => field.name);
         const qualifiedNames = fields.map((field) => field.namespace + "." + field.name);
+        // TODO: Fix for namespace 
         const result = ["id", "firstName", "roleId"].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
         return { result, position: "Identifier \"id\" (line 4, column 17)" };
     }
