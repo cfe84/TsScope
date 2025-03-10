@@ -1,4 +1,10 @@
-TSScope is a simple implementation of a scope script compiler to Typescript.
+TSScope is a toy implementation of a scope script compiler to Typescript.
+
+Usage: `ScopeCompiler script.scope` outputs `script.ts` that can then be ran with `node --import=tsx script.ts`.
+
+Examples in the `Examples` folder.
+
+This compiler is using this syntax:
 
 ```EBNF
 
