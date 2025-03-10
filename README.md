@@ -64,3 +64,5 @@ This compiler is using this syntax:
 <EOL> ::= \n
 <TS_EXPRESSION> ::= '{' [^}]+ '}'
 ```
+
+AST is generated using `node Tools/generateAst.js`.
