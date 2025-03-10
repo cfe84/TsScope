@@ -2,7 +2,7 @@ TSScope is a toy implementation of a scope script compiler to Typescript.
 
 Usage: `ScopeCompiler script.scope` outputs `script.ts` that can then be ran with `node --import=tsx script.ts`.
 
-Examples in the `Examples` folder.
+Examples in the `Examples` folder. As of this version, it can support reading and outputting to CSV, selecting, filtering, and inner joins between multiple sources.
 
 This compiler is using this syntax:
 
@@ -64,5 +64,9 @@ This compiler is using this syntax:
 <EOL> ::= \n
 <TS_EXPRESSION> ::= '{' [^}]+ '}'
 ```
+
+Conditions and filtering are done using Typescript expressions, which are encapsulated using `{  }` for parsing simplicity. Closing brackets within must be escaped using `\}`.
+
+Parser is mostly recursive, except for JOIN conditions, which are left-associative and parsed iteratively.
 
 AST is generated using `node Tools/generateAst.js`.
