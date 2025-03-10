@@ -322,6 +322,7 @@ const closableOutputs: IClosableOutput[] = [];
 ///////////////////////////////////////////////
 
 function condition_0(people_in, roles_in, record) {
+  // TODO: Should use namespace instead of the left/right names.
   const people: any = {};
   const roles: any = {};
   for (const field of people_in) {
@@ -330,7 +331,10 @@ function condition_0(people_in, roles_in, record) {
   for (const field of roles_in) {
     roles[field.name.name] = field.value;
   }
-  return people.roleId === roles.id;
+  const res = // Condition must be on new line to accomodate for the tsIgnore flag
+    // @ts-ignore
+people.roleId === roles.id;
+  return res;
 }
 
 const input_0 = new NamedSource(new FileSource("input.csv", star), "input");

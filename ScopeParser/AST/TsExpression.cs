@@ -6,21 +6,15 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class JoinQuery(Token token, SelectSource left, Source right, JoinType joinType, TsExpression condition) : SelectSource {
+public class TsExpression(Token token, string expression) : Node {
       
     public override T Visit<T>(INodeVisitor<T> visitor)
     {
-        return visitor.VisitJoinQuery(this);
+        return visitor.VisitTsExpression(this);
     }
 
     public override Token Token => token;
       
-    public SelectSource Left => left;
-
-    public Source Right => right;
-
-    public JoinType JoinType => joinType;
-
-    public TsExpression Condition => condition;
+    public string Expression => expression;
 }
       

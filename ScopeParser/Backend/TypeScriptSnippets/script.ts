@@ -26,6 +26,24 @@ const star: FieldsSpec = {
 
 type Record = Field[];
 
+function recordToObject(record: Record): { [key: string]: any } {
+  const obj: { [key: string]: any } = {};
+  // Assign to root.
+  for (const field of record) {
+    obj[field.name.name] = field.value;
+  }
+  // Assign to namespace if typed.
+  for (const field of record) {
+    if (field.name.namespace && !(field.name.namespace in obj)) {
+      obj[field.name.namespace] = {};
+    }
+    if (field.name.namespace) {
+      obj[field.name.namespace][field.name.name] = field.value;
+    }
+  }
+  return obj;
+}
+
 interface IConsumer {
   receiveRecord(source: Source, record: Record): void;
   receiveSchema(source: Source, schema: QualifiedName[]): void;

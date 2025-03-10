@@ -113,19 +113,21 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitWhereStatement(WhereStatement node)
     {
+        var condition = Visit(node.Condition);
         return snippetProvider.GetSnippet("whereStatement",
-            ("condition", node.Condition)
+            ("condition", condition)
         );
     }
 
     public string VisitJoinQuery(JoinQuery node)
     {
         var conditionName = getConditionName(conditions.Count);
+        var tsExpression = Visit(node.Condition);
         var condition = snippetProvider.GetSnippet("joinCondition",
             ("name", conditionName),
             ("left", node.Left.GetType() == typeof(Identifier) ? ((Identifier)node.Left).Value : "_left"),
             ("right", node.Right.GetType() == typeof(Identifier) ? ((Identifier)node.Right).Value : "_right"),
-            ("condition", node.Condition)
+            ("condition", tsExpression)
         );
         conditions.Add(condition);
         return snippetProvider.GetSnippet("joinQuery",
@@ -139,5 +141,10 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     private string getConditionName(int number)
     {
         return "condition_" + number;
+    }
+
+    public string VisitTsExpression(TsExpression node)
+    {
+        return node.Expression;
     }
 }

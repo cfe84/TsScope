@@ -298,7 +298,7 @@ public class ParserTest
         var join = validateJoinQuery(select.Source);
         validateIdentifierSource(join.Left, "input");
         validateIdentifierSource(join.Right, "input_2");
-        join.Condition.Should().Be("filter");
+        validateTsExpression(join.Condition, "filter");
     }
 
     [Fact]
@@ -343,9 +343,9 @@ public class ParserTest
         var firstJoin = validateJoinQuery(secondJoin.Left);
         validateIdentifierSource(firstJoin.Left, "input");
         validateIdentifierSource(firstJoin.Right, "input_2");
-        firstJoin.Condition.Should().Be("filter_1");
+        validateTsExpression(firstJoin.Condition, "filter_1");
         validateIdentifierSource(secondJoin.Right, "input_3");
-        secondJoin.Condition.Should().Be("filter_2");
+        validateTsExpression(secondJoin.Condition, "filter_2");
     }
 
     [Fact]
@@ -421,7 +421,7 @@ public class ParserTest
     {
         selectQuery.Where.Should().NotBeNull();
         var whereQuery = selectQuery.Where;
-        whereQuery.Condition.Should().Be(expected);
+        validateTsExpression(whereQuery.Condition, expected);
         return (WhereStatement)selectQuery.Where;
     }
 
@@ -456,6 +456,13 @@ public class ParserTest
             fieldList.Fields[i].Name.Should().Be(expected[i].Item2);
         }
         return fieldList;
+    }
+
+    private TsExpression validateTsExpression(TsExpression expression, string expected)
+    {
+        expression.Should().BeOfType<TsExpression>();
+        expression.Expression.Should().Be(expected);
+        return expression;
     }
 
     private Token fromTokenType(TokenType type)

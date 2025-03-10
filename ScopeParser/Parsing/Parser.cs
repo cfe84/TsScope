@@ -191,8 +191,8 @@ namespace ScopeParser.Parsing
                 expect(TokenType.Join, "JOIN");
                 var right = parseSource();
                 expect(TokenType.On, "ON");
-                var condition = expect(TokenType.TsExpression, "a valid TS expression");
-                left = new JoinQuery(joinTypeToken, left, right, joinType, condition.ValueAs<string>());
+                var condition = parseTsExpression();
+                left = new JoinQuery(joinTypeToken, left, right, joinType, condition);
             }
             return left;
         }
@@ -207,8 +207,8 @@ namespace ScopeParser.Parsing
             if (match(TokenType.Where))
             {
                 var token = previous();
-                var expression = expect(TokenType.TsExpression, "a valid TS expression");
-                return new WhereStatement(token, expression.ValueAs<string>());
+                var expression = parseTsExpression();
+                return new WhereStatement(token, expression);
             }
             return null;
         }
@@ -270,6 +270,12 @@ namespace ScopeParser.Parsing
             }
             return new Field(token, identifier.ValueAs<string>(), null);
             // TODO: Support "AS"
+        }
+
+        private TsExpression parseTsExpression()
+        {
+            var token = expect(TokenType.TsExpression, "a valid TS expression");
+            return new TsExpression(token, token.ValueAs<string>());
         }
 
         private void synchronize()

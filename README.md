@@ -1,3 +1,5 @@
+TSScope is a simple implementation of a scope script compiler to Typescript.
+
 ```EBNF
 
 <SCRIPT> ::= <STATEMENT>* EOF

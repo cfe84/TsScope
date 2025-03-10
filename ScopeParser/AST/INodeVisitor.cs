@@ -20,4 +20,5 @@ public interface INodeVisitor<T> {
     public T VisitSelectQuery(SelectQuery node);
     public T VisitOutput(Output node);
     public T VisitJoinQuery(JoinQuery node);
+    public T VisitTsExpression(TsExpression node);
 }

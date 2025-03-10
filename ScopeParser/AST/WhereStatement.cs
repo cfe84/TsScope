@@ -6,7 +6,7 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class WhereStatement(Token token, string condition) : Node {
+public class WhereStatement(Token token, TsExpression condition) : Node {
       
     public override T Visit<T>(INodeVisitor<T> visitor)
     {
@@ -15,6 +15,6 @@ public class WhereStatement(Token token, string condition) : Node {
 
     public override Token Token => token;
       
-    public string Condition => condition;
+    public TsExpression Condition => condition;
 }
       
