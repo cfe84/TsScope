@@ -6,20 +6,19 @@ using ScopeParser.Lexing;
 
 public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<string>
 {
-    public List<string> startableSources = new List<string>();
-    public List<string> closableOutputs = new List<string>();
     public string Visit(Node node) => node.Visit(this);
-    private Dictionary<string, int> variableCount = new Dictionary<string, int>();
+    private Dictionary<string, int> variableCount = new();
+    private List<string> conditions = new();
     private int outputCount = 0;
 
     public string VisitScript(Script node)
     {
         var statements = node.Statements.Select(Visit).ToList();
-        var start = string.Join("\n", startableSources.Select(source => snippetProvider.GetSnippet("startSource", ("identifier", source))));
-        var close = string.Join("\n", closableOutputs.Select(output => snippetProvider.GetSnippet("closeSource", ("identifier", output))));
+        var conditionsStr = string.Join("\n", conditions);
         // The main script snippet contains all the boiler plate. Statements are just inserted in its midst
         return snippetProvider.GetSnippet("script",
-            ("statements", string.Join("\n", statements))
+            ("statements", string.Join("\n", statements)),
+            ("conditions", conditionsStr)
         );
     }
 
@@ -121,10 +120,24 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitJoinQuery(JoinQuery node)
     {
-        return snippetProvider.GetSnippet("joinQuery",
-            ("source1", Visit(node.Left)),
-            ("source2", Visit(node.Right)),
+        var conditionName = getConditionName(conditions.Count);
+        var condition = snippetProvider.GetSnippet("joinCondition",
+            ("name", conditionName),
+            ("left", node.Left.GetType() == typeof(Identifier) ? ((Identifier)node.Left).Value : "_left"),
+            ("right", node.Right.GetType() == typeof(Identifier) ? ((Identifier)node.Right).Value : "_right"),
             ("condition", node.Condition)
         );
+        conditions.Add(condition);
+        return snippetProvider.GetSnippet("joinQuery",
+            ("left", Visit(node.Left)),
+            ("right", Visit(node.Right)),
+            ("condition", conditionName),
+            ("joinType", node.JoinType.ToString())
+        );
+    }
+
+    private string getConditionName(int number)
+    {
+        return "condition_" + number;
     }
 }

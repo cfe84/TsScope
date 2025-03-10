@@ -130,6 +130,7 @@ public class LexerTest
     [InlineData("OUTPUT", TokenType.Output)]
     [InlineData("WHERE", TokenType.Where)]
     [InlineData("AS", TokenType.As)]
+    [InlineData("ON", TokenType.On)]
     [InlineData("TO", TokenType.To)]
     public void TestDirectiveAndKeywords(string input, TokenType expected)
     {

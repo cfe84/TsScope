@@ -145,6 +145,7 @@ public class Lexer(string source)
         { "JOIN", TokenType.Join },
         { "LEFT", TokenType.Left },
         { "RIGHT", TokenType.Right },
+        { "ON", TokenType.On },
         { "WHERE", TokenType.Where },
         { "AS", TokenType.As },
         { "TO", TokenType.To },

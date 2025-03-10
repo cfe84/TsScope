@@ -1,0 +1,1 @@
+new JoinSource(__left__, __right__, __condition__, JoinType.__joinType__)
