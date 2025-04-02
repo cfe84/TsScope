@@ -368,20 +368,14 @@ function condition_1(record) {
 const input_0 = new NamedSource(new FileSource("input.csv", star), "input");
 const roles_0 = new NamedSource(new FileSource("role.csv", star), "roles");
 const country_0 = new NamedSource(new FileSource("country.csv", star), "country");
-const people_0 = new NamedSource(new SelectQuerySource(input_0, {
-    fieldFilter: (field: QualifiedName) => ["id", "firstName", "roleId"]
-        // TODO: Fix for namespace 
-        .includes(field.name) || ["id", "firstName", "roleId"].includes(`${field.namespace}.${field.name}`),
-    missingFields: (fields: QualifiedName[]) => {
-        const fieldNames = fields.map((field) => field.name);
-        const qualifiedNames = fields.map((field) => field.namespace + "." + field.name);
-        // TODO: Fix for namespace 
-        const result = ["id", "firstName", "roleId"].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
-        return { result, position: "Identifier \"id\" (line 4, column 17)" };
-    }
-}, undefined), "people");
-const withCountry_0 = new NamedSource(new SelectQuerySource(new JoinSource(new JoinSource(input_0, roles_0, condition_1, JoinType.Inner), country_0, condition_0, JoinType.Inner), star, undefined), "withCountry");
-const output_0 = new FileOutput("join_two_joins.csv");
+const withCountry_0 = new NamedSource(new SelectQuerySource(new JoinSource(new JoinSource(input_0, roles_0, condition_1, JoinType.Inner), country_0, condition_0, JoinType.Inner), star, (record: any) => {
+    record = recordToObject(record);
+    Object.assign(globalThis, record);
+    const res = // Condition must be on new line to accomodate for the tsIgnore flag
+        age >= 30 && roles.roleName === 'Guest'
+    return res;
+}), "withCountry");
+const output_0 = new FileOutput("join--two-joins.csv");
 withCountry_0.registerConsumer(output_0);
 
 ///////////////////////////////////////////////

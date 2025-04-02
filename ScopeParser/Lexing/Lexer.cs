@@ -219,9 +219,9 @@ public class Lexer(string source)
             }
             str.Append(next());
         }
-        if (peek() != '}')
+        if (isFinished())
         {
-            throw new LexError("Unterminated TsExpression", startingLine, startingColumn);
+            throw new LexError("Unterminated typescript expression", startingLine, startingColumn);
         }
         next();
         return new Token(TokenType.TsExpression, str.ToString().Trim(), startingLine, startingColumn);

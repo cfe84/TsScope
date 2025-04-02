@@ -272,6 +272,7 @@ public class LexerTest
 
     [Theory]
     [InlineData("{dfsfs.toString()}")]
+    [InlineData("{dfsfs.toString(); \n another line}")]
     [InlineData("{ \"This string has \\}\" }")]
     public void TestTsExpression(string input)
     {
@@ -287,6 +288,20 @@ public class LexerTest
         tokens[0].Line.Should().Be(2);
         tokens[0].Column.Should().Be(2);
         tokens[0].ValueAs<string>().Should().Be(input.Substring(1, input.Length - 2).Trim());
+    }
+
+    [Fact]
+    public void TestUnclosedTsExpression()
+    {
+        // Given
+        var source = "/* A comment */ \n {this is an unclosed ts expression \n*";
+        var lexer = new Lexer(source);
+
+        // When
+        Action action = () => lexer.Scan().ToList();
+
+        // Then
+        action.Should().Throw<LexError>().WithMessage("Unterminated typescript expression");
     }
 
     [Fact]

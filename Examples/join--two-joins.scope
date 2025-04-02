@@ -1,0 +1,8 @@
+input = EXTRACT * FROM "input.csv";
+roles = EXTRACT * FROM "role.csv";
+country = EXTRACT * FROM "country.csv";
+withCountry = SELECT * FROM input
+    INNER JOIN roles ON { input.roleId === roles.id } // TODO : if the named source doesnt exist it segfaults
+    INNER JOIN country ON { country.countryCode === input.country } // This doesn't work because the namespace needs to go from one join to the next
+    WHERE { age >= 30 && roles.roleName === 'Guest' };
+OUTPUT withCountry TO "join--two-joins.csv";
