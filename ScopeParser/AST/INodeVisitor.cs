@@ -9,9 +9,10 @@ namespace ScopeParser.Ast;
 public interface INodeVisitor<T> {
     public T Visit(Node node);
 
+    public T VisitAliasedField(AliasedField node);
     public T VisitAliasedSource(AliasedSource node);
     public T VisitAssignment(Assignment node);
-    public T VisitField(Field node);
+    public T VisitInputField(InputField node);
     public T VisitFieldList(FieldList node);
     public T VisitFileSource(FileSource node);
     public T VisitIdentifier(Identifier node);

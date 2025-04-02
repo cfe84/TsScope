@@ -5,9 +5,10 @@ const path = require('path');
 function run() {
   const outputDirectory = getOutputDir();
   const terminalTypes = {
+    "AliasedField": ["Field field", "string alias"],
     "AliasedSource": ["Source source", "Identifier alias"],
     "Assignment":  ["Identifier variableName", "Source source"],
-    "Field": ["string name", "string? ns"],
+    "InputField": ["string name", "string? ns"],
     "FieldList": ["Field[] fields"],
     "FileSource": ["FieldSpec fieldSpec", "string fileName"],
     "Identifier": ["string value"],
@@ -24,6 +25,7 @@ function run() {
     "Source": ["FileSource", "SelectQuery", "Identifier"],
     "AliasableSource": ["Source", "AliasedSource"],
     "SelectSource": ["AliasableSource", "JoinQuery"],
+    "Field": ["InputField", "AliasedField"], // TODO: add a ts expression
     "FieldSpec": ["FieldList", "Star"],
   };
   const types = {};
@@ -35,7 +37,7 @@ function run() {
   for (const type of Object.keys(compositeTypes)) {
     const compositedIn = Object.keys(compositeTypes).filter(key => compositeTypes[key].indexOf(type) >= 0);
     const parentTypes = compositedIn.length > 0 ? compositedIn : ["Node"];
-    types[type] = { parentTypes, fields: [], isComposite: true };
+    types[type] = { parentTypes, childrenTypes: compositeTypes[type], fields: [], isComposite: true };
   }
   createAst(outputDirectory, "Node", types);
 }
@@ -78,6 +80,10 @@ function createType(outputDirectory, name, config, baseName) {
   const parameters = `(${["Token token"].concat(config.fields).join(', ')})`;
   if (config.isComposite) {
     fs.writeFileSync(basePath, `${header}
+/// <summary>
+/// Can be one of:
+${config.childrenTypes.map(type => `/// - ${type}`).join('\n')}
+/// </summary>
 public interface ${name} : ${config.parentTypes.join(", ")} {}
 `);
   } else {

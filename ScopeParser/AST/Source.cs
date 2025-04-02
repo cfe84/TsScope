@@ -6,4 +6,10 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
+/// <summary>
+/// Can be one of:
+/// - FileSource
+/// - SelectQuery
+/// - Identifier
+/// </summary>
 public interface Source : AliasableSource {}

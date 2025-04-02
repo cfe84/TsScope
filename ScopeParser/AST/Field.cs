@@ -6,17 +6,9 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class Field(Token token, string name, string? ns) : Node {
-      
-    public T Visit<T>(INodeVisitor<T> visitor)
-    {
-        return visitor.VisitField(this);
-    }
-
-    public Token Token => token;
-      
-    public string Name => name;
-
-    public string? Ns => ns;
-}
-      
+/// <summary>
+/// Can be one of:
+/// - InputField
+/// - AliasedField
+/// </summary>
+public interface Field : Node {}

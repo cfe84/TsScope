@@ -35,16 +35,17 @@ This compiler is using this syntax:
 
 <OUTPUT> = "OUTPUT" <STREAM> "TO" <STRING> // Same, should be STRING_VALUE
 
-<FIELD_SPEC> = "*" | <FIELD_LIST>
+<FIELD_SPEC> = "*"
+	| <FIELD_LIST> // Todo: support *, somefield AS something, { somefield / 2 } AS somethingElse
 
 <FIELD_LIST> = <FIELD>
 	| <FIELD> "," <FIELD>+
 
 
-<FIELD> = <FIELD_IDENTIFIER>
-	| <FIELD_VALUE> "AS" <IDENTIFIER> // P2
+<FIELD> = <INPUT_FIELD>
+	| <FIELD> "AS" <IDENTIFIER>
 
-<FIELD_IDENTIFIER> ::= <IDENTIFIER>
+<INPUT_FIELD> ::= <IDENTIFIER>
     | <IDENTIFIER> '.' <IDENTIFIER>
 
 <COMMENT> ::=

@@ -44,7 +44,7 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         );
     }
 
-    public string VisitField(Field field)
+    public string VisitInputField(InputField field)
     {
         // Account for qualified names:
         if (field.Ns != null)
@@ -155,5 +155,10 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
             ("source", source),
             ("alias", alias)
         );
+    }
+
+    public string VisitAliasedField(AliasedField node)
+    {
+        throw new NotImplementedException();
     }
 }

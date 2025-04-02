@@ -258,7 +258,43 @@ public class ParserTest
         validateScript(parser, script);
         var assignment = validateAssignment(script.Statements[0], "output");
         var select = validateSelectQuery(assignment.Source);
-        validateFields(select.Fields, ("input", "field_name"), (null, "field_name_2"));
+        validateInputFields(select.Fields, ("input", "field_name"), (null, "field_name_2"));
+        validateIdentifierSource(select.Source, "input");
+    }
+
+    [Fact]
+    public void TestSelectFieldsWithAlias()
+    {
+        // Given
+        var source = new List<Token> {
+            new Token(TokenType.Identifier, "output", 1, 1),
+            fromTokenType(TokenType.Equal),
+            fromTokenType(TokenType.Select),
+            new Token(TokenType.Identifier, "input", 1, 2),
+            fromTokenType(TokenType.Dot),
+            new Token(TokenType.Identifier, "field_name", 1, 2),
+            fromTokenType(TokenType.Comma),
+            new Token(TokenType.Identifier, "field_name_2", 1, 3),
+            fromTokenType(TokenType.As),
+            new Token(TokenType.Identifier, "field_name_2_alias", 1, 4),
+            fromTokenType(TokenType.From),
+            new Token(TokenType.Identifier, "input", 1, 5),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script);
+        var assignment = validateAssignment(script.Statements[0], "output");
+        var select = validateSelectQuery(assignment.Source);
+        var fieldList = validateFieldList(select.Fields, 2);
+        validateInputField(fieldList.Fields[0], "input", "field_name");
+        var aliasedField = validateAliasedField(fieldList.Fields[1], "field_name_2_alias");
+        validateInputField(aliasedField.Field, null, "field_name_2");
         validateIdentifierSource(select.Source, "input");
     }
 
@@ -294,7 +330,7 @@ public class ParserTest
         validateScript(parser, script);
         var assignment = validateAssignment(script.Statements[0], "output");
         var select = validateSelectQuery(assignment.Source);
-        validateFields(select.Fields, ("input", "field_name"), (null, "field_name_2"));
+        validateInputFields(select.Fields, ("input", "field_name"), (null, "field_name_2"));
         var join = validateJoinQuery(select.Source);
         validateIdentifierSource(join.Left, "input");
         validateIdentifierSource(join.Right, "input_2");
@@ -340,7 +376,7 @@ public class ParserTest
         validateScript(parser, script);
         var assignment = validateAssignment(script.Statements[0], "output");
         var select = validateSelectQuery(assignment.Source);
-        validateFields(select.Fields, ("input", "field_name"), (null, "field_name_2"));
+        validateInputFields(select.Fields, ("input", "field_name"), (null, "field_name_2"));
         var secondJoin = validateJoinQuery(select.Source);
         var firstJoin = validateJoinQuery(secondJoin.Left);
         validateIdentifierSource(firstJoin.Left, "input");
@@ -464,17 +500,39 @@ public class ParserTest
         return (Star)fieldSpec;
     }
 
-    private FieldList validateFields(FieldSpec fieldSpec, params (string?, string)[] expected)
+    private FieldList validateFieldList(FieldSpec fieldSpec, int expectedLength)
     {
         fieldSpec.Should().BeOfType<FieldList>();
         var fieldList = (FieldList)fieldSpec;
-        fieldList.Fields.Should().HaveCount(expected.Length);
+        fieldList.Fields.Should().HaveCount(expectedLength);
+        return fieldList;
+    }
+
+    private FieldList validateInputFields(FieldSpec fieldSpec, params (string?, string)[] expected)
+    {
+        var fieldList = validateFieldList(fieldSpec, expected.Length);
         for (int i = 0; i < expected.Length; i++)
         {
-            fieldList.Fields[i].Ns.Should().Be(expected[i].Item1);
-            fieldList.Fields[i].Name.Should().Be(expected[i].Item2);
+            validateInputField(fieldList.Fields[i], expected[i].Item1, expected[i].Item2);
         }
         return fieldList;
+    }
+
+    private InputField validateInputField(Field field, string? expectedNs, string expectedName)
+    {
+        field.Should().BeOfType<InputField>();
+        var inputField = (InputField)field;
+        inputField.Ns.Should().Be(expectedNs);
+        inputField.Name.Should().Be(expectedName);
+        return inputField;
+    }
+
+    private AliasedField validateAliasedField(Field field, string expectedAlias)
+    {
+        field.Should().BeOfType<AliasedField>();
+        var aliasedField = (AliasedField)field;
+        aliasedField.Alias.Should().Be(expectedAlias);
+        return aliasedField;
     }
 
     private TsExpression validateTsExpression(TsExpression expression, string expected)

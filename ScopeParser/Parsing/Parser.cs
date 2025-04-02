@@ -272,16 +272,27 @@ namespace ScopeParser.Parsing
         private Field parseField()
         {
             var token = peek();
+            // TODO: support TS expression as field
             var identifier = expect(TokenType.Identifier, "field or source identifier");
-            if (match(TokenType.Dot))
+            InputField res;
+            if (match(TokenType.Dot)) // There's a namespace
             {
                 var field = expect(TokenType.Identifier, "field identifier");
                 if (field == null)
                     throw new ParseError("Expected field after dot", next());
-                return new Field(token, field.ValueAs<string>(), identifier.ValueAs<string>());
+                res = new InputField(token, field.ValueAs<string>(), identifier.ValueAs<string>());
             }
-            return new Field(token, identifier.ValueAs<string>(), null);
-            // TODO: Support "AS"
+            else
+            {
+                res = new InputField(token, identifier.ValueAs<string>(), null);
+            }
+
+            if (match(TokenType.As))
+            {
+                var alias = parseIdentifier(true)!;
+                return new AliasedField(token, res, alias.Value);
+            }
+            return res;
         }
 
         private TsExpression parseTsExpression()
