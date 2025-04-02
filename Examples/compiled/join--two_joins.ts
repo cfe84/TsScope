@@ -353,7 +353,7 @@ function condition_0(record) {
   record = recordToObject(record);
   Object.assign(globalThis, record);
   const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    country.countryCode === input.country;
+    country.countryCode === users.country;
   return res;
 }
 
@@ -361,21 +361,21 @@ function condition_1(record) {
   record = recordToObject(record);
   Object.assign(globalThis, record);
   const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    input.roleId === roles.id;
+    users.roleId === roles.id;
   return res;
 }
 
-const input_0 = new NamedSource(new FileSource("input.csv", star), "input");
-const roles_0 = new NamedSource(new FileSource("role.csv", star), "roles");
-const country_0 = new NamedSource(new FileSource("country.csv", star), "country");
-const withCountry_0 = new NamedSource(new SelectQuerySource(new JoinSource(new JoinSource(input_0, roles_0, condition_1, JoinType.Inner), country_0, condition_0, JoinType.Inner), star, (record: any) => {
+const users_0 = new NamedSource(new FileSource("inputs/users.csv", star), "users");
+const roles_0 = new NamedSource(new FileSource("inputs/role.csv", star), "roles");
+const country_0 = new NamedSource(new FileSource("inputs/country.csv", star), "country");
+const withCountry_0 = new NamedSource(new SelectQuerySource(new JoinSource(new JoinSource(users_0, roles_0, condition_1, JoinType.Inner), country_0, condition_0, JoinType.Inner), star, (record: any) => {
     record = recordToObject(record);
     Object.assign(globalThis, record);
     const res = // Condition must be on new line to accomodate for the tsIgnore flag
         age >= 30 && roles.roleName === 'Guest'
     return res;
 }), "withCountry");
-const output_0 = new FileOutput("join--two-joins.csv");
+const output_0 = new FileOutput("outputs/join--two_joins.csv");
 withCountry_0.registerConsumer(output_0);
 
 ///////////////////////////////////////////////

@@ -28,15 +28,25 @@ type Record = Field[];
 
 function recordToObject(record: Record): { [key: string]: any } {
   const obj: { [key: string]: any } = {};
-  // Assign to root.
-  for (const field of record) {
-    obj[field.name.name] = field.value;
-  }
-  // Assign to namespace if typed.
+  // We give precedence to namespaces. If a field is conflicting
+  // with a namespace, it should be ignored.
   for (const field of record) {
     if (field.name.namespace && !(field.name.namespace in obj)) {
       obj[field.name.namespace] = {};
     }
+  }
+
+  // Assign to root. We keep only the first value. If two fields are
+  // conflicting, we should return a warning.
+  for (const field of record) {
+    if (!(field.name.name in obj)) {
+      obj[field.name.name] = field.value;
+    } else {
+      // TODO: Handle conflicts better.
+    }
+  }
+  // Assign to namespace if typed.
+  for (const field of record) {
     if (field.name.namespace) {
       obj[field.name.namespace][field.name.name] = field.value;
     }
@@ -229,7 +239,7 @@ enum JoinType {
   Right = "Right",
 }
 
-type JoinCondition = (left: Record, right: Record, record: Record) => boolean;
+type JoinCondition = (record: Record) => boolean;
 
 // This can be heavily optimized. A proper join algorithm should be used.
 // This is a naive implementation that just iterates over the records and saves
@@ -294,7 +304,7 @@ class JoinSource extends Source implements IConsumer {
     for (const leftRecord of this.leftRecords) {
       for (const rightRecord of this.rightRecords) {
         const fullRecord = [...leftRecord, ...rightRecord];
-        if (this.condition(leftRecord, rightRecord, fullRecord)) {
+        if (this.condition(fullRecord)) {
           this.notifyConsumers(fullRecord);
         }
       }
@@ -340,48 +350,33 @@ const closableOutputs: IClosableOutput[] = [];
 ///////////////////////////////////////////////
 
 
-const input_0 = new NamedSource(new FileSource("input.csv", {
-    fieldFilter: (field: QualifiedName) => ["id", "firstName", "age"]
-        .includes(field.name) || ["id", "firstName", "age"].includes(`${field.namespace}.${field.name}`),
-    missingFields: (fields: QualifiedName[]) => {
-        const fieldNames = fields.map((field) => field.name);
-        const qualifiedNames = fields.map((field) => field.namespace + "." + field.name);
-        const result = ["id", "firstName", "age"].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
-        return { result, position: "Identifier \"id\" (line 1, column 17)" };
-    }
-}), "input");
+const input_0 = new NamedSource(new FileSource("inputs/users.csv", star), "input");
 const fields_0 = new NamedSource(new SelectQuerySource(input_0, {
-    fieldFilter: (field: QualifiedName) => ["id", "firstName", "age"]
-        .includes(field.name) || ["id", "firstName", "age"].includes(`${field.namespace}.${field.name}`),
+    fieldFilter: (field: QualifiedName) => ["id", "firstName"]
+        // TODO: Fix for namespace 
+        .includes(field.name) || ["id", "firstName"].includes(`${field.namespace}.${field.name}`),
     missingFields: (fields: QualifiedName[]) => {
         const fieldNames = fields.map((field) => field.name);
         const qualifiedNames = fields.map((field) => field.namespace + "." + field.name);
-        const result = ["id", "firstName", "age"].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
+        // TODO: Fix for namespace 
+        const result = ["id", "firstName"].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
         return { result, position: "Identifier \"id\" (line 2, column 17)" };
     }
 }, undefined), "fields");
-const filtered_0 = new NamedSource(new SelectQuerySource(fields_0, {
-    fieldFilter: (field: QualifiedName) => ["firstName", "age"]
-        .includes(field.name) || ["firstName", "age"].includes(`${field.namespace}.${field.name}`),
+const fields_1 = new NamedSource(new SelectQuerySource(fields_0, {
+    fieldFilter: (field: QualifiedName) => ["fields.id", "firstName", "age"]
+        // TODO: Fix for namespace 
+        .includes(field.name) || ["fields.id", "firstName", "age"].includes(`${field.namespace}.${field.name}`),
     missingFields: (fields: QualifiedName[]) => {
         const fieldNames = fields.map((field) => field.name);
         const qualifiedNames = fields.map((field) => field.namespace + "." + field.name);
-        const result = ["firstName", "age"].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
-        return { result, position: "Identifier \"firstName\" (line 3, column 19)" };
+        // TODO: Fix for namespace 
+        const result = ["fields.id", "firstName", "age"].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
+        return { result, position: "Identifier \"fields\" (line 3, column 17)" };
     }
-}, (record: any) => {
-    record = recordToObject(record);
-    Object.assign(globalThis, record);
-    const res = // Condition must be on new line to accomodate for the tsIgnore flag
-        age > 30
-    return res;
-}), "filtered");
-const output_0 = new FileOutput("select_fields.csv");
-fields_0.registerConsumer(output_0);
-const output_1 = new FileOutput("select_input_copy.csv");
-input_0.registerConsumer(output_1);
-const output_2 = new FileOutput("select_filtered.csv");
-filtered_0.registerConsumer(output_2);
+}, undefined), "fields");
+const output_0 = new FileOutput("fields.csv");
+fields_1.registerConsumer(output_0);
 
 ///////////////////////////////////////////////
 //                                           //
