@@ -9,16 +9,17 @@ namespace ScopeParser.Ast;
 public interface INodeVisitor<T> {
     public T Visit(Node node);
 
-    public T VisitScript(Script node);
-    public T VisitWhereStatement(WhereStatement node);
+    public T VisitAliasedSource(AliasedSource node);
     public T VisitAssignment(Assignment node);
-    public T VisitFileSource(FileSource node);
-    public T VisitFieldList(FieldList node);
-    public T VisitStar(Star node);
     public T VisitField(Field node);
+    public T VisitFieldList(FieldList node);
+    public T VisitFileSource(FileSource node);
     public T VisitIdentifier(Identifier node);
-    public T VisitSelectQuery(SelectQuery node);
-    public T VisitOutput(Output node);
     public T VisitJoinQuery(JoinQuery node);
+    public T VisitOutput(Output node);
+    public T VisitSelectQuery(SelectQuery node);
+    public T VisitScript(Script node);
+    public T VisitStar(Star node);
     public T VisitTsExpression(TsExpression node);
+    public T VisitWhereStatement(WhereStatement node);
 }

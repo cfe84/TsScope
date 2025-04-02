@@ -8,12 +8,12 @@ namespace ScopeParser.Ast;
 
 public class Script(Token token, Statement[] statements) : Node {
       
-    public override T Visit<T>(INodeVisitor<T> visitor)
+    public T Visit<T>(INodeVisitor<T> visitor)
     {
         return visitor.VisitScript(this);
     }
 
-    public override Token Token => token;
+    public Token Token => token;
       
     public Statement[] Statements => statements;
 }

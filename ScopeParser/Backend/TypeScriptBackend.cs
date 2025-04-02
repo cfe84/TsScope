@@ -146,4 +146,14 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     {
         return node.Expression;
     }
+
+    public string VisitAliasedSource(AliasedSource node)
+    {
+        var source = Visit(node.Source);
+        var alias = node.Alias.Value;
+        return snippetProvider.GetSnippet("aliasedSource",
+            ("source", source),
+            ("alias", alias)
+        );
+    }
 }

@@ -6,4 +6,4 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public interface Source : AliasableSource {}
+public interface AliasableSource : SelectSource {}

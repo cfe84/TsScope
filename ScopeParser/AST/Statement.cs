@@ -6,4 +6,4 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public abstract class Statement : Node {}
+public interface Statement : Node {}

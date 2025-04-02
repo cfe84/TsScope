@@ -319,13 +319,15 @@ public class ParserTest
             fromTokenType(TokenType.Inner),
             fromTokenType(TokenType.Join),
             new Token(TokenType.Identifier, "input_2", 1, 5),
+            fromTokenType(TokenType.As),
+            new Token(TokenType.Identifier, "input_2_alias", 1, 6),
             fromTokenType(TokenType.On),
-            new Token(TokenType.TsExpression, "filter_1", 1, 6),
+            new Token(TokenType.TsExpression, "filter_1", 1, 7),
             fromTokenType(TokenType.Outer),
             fromTokenType(TokenType.Join),
-            new Token(TokenType.Identifier, "input_3", 1, 5),
+            new Token(TokenType.Identifier, "input_3", 1, 8),
             fromTokenType(TokenType.On),
-            new Token(TokenType.TsExpression, "filter_2", 1, 6),
+            new Token(TokenType.TsExpression, "filter_2", 1, 9),
             fromTokenType(TokenType.SemiColon),
             fromTokenType(TokenType.EndOfFile),
         };
@@ -342,7 +344,7 @@ public class ParserTest
         var secondJoin = validateJoinQuery(select.Source);
         var firstJoin = validateJoinQuery(secondJoin.Left);
         validateIdentifierSource(firstJoin.Left, "input");
-        validateIdentifierSource(firstJoin.Right, "input_2");
+        validateAliasedSource(firstJoin.Right, "input_2", "input_2_alias");
         validateTsExpression(firstJoin.Condition, "filter_1");
         validateIdentifierSource(secondJoin.Right, "input_3");
         validateTsExpression(secondJoin.Condition, "filter_2");
@@ -437,6 +439,23 @@ public class ParserTest
         var identifier = (Identifier)source;
         identifier.Value.Should().Be(expected);
         return identifier;
+    }
+
+    private Identifier validateIdentifier(Identifier identifer, string expected)
+    {
+        identifer.Should().BeOfType<Identifier>();
+        var identifier = (Identifier)identifer;
+        identifier.Value.Should().Be(expected);
+        return identifier;
+    }
+
+    private AliasedSource validateAliasedSource(SelectSource source, string expectedInput, string expectedAlias)
+    {
+        source.Should().BeOfType<AliasedSource>();
+        var aliasedSource = (AliasedSource)source;
+        validateIdentifierSource(aliasedSource.Source, expectedInput);
+        validateIdentifier(aliasedSource.Alias, expectedAlias);
+        return aliasedSource;
     }
 
     private Star validateStar(FieldSpec fieldSpec)

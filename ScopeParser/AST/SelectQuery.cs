@@ -8,12 +8,12 @@ namespace ScopeParser.Ast;
 
 public class SelectQuery(Token token, FieldSpec fields, SelectSource source, WhereStatement? where) : Source {
       
-    public override T Visit<T>(INodeVisitor<T> visitor)
+    public T Visit<T>(INodeVisitor<T> visitor)
     {
         return visitor.VisitSelectQuery(this);
     }
 
-    public override Token Token => token;
+    public Token Token => token;
       
     public FieldSpec Fields => fields;
 

@@ -1,0 +1,4 @@
+users = EXTRACT * FROM "inputs/users.csv";
+admins = SELECT users.id, users.firstName, users.adminId, admins.id, admins.firstName FROM users
+    INNER JOIN users AS admins ON { users.adminId === admins.id };
+OUTPUT admins TO "outputs/join--self_join.csv";

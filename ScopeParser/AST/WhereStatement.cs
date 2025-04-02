@@ -8,12 +8,12 @@ namespace ScopeParser.Ast;
 
 public class WhereStatement(Token token, TsExpression condition) : Node {
       
-    public override T Visit<T>(INodeVisitor<T> visitor)
+    public T Visit<T>(INodeVisitor<T> visitor)
     {
         return visitor.VisitWhereStatement(this);
     }
 
-    public override Token Token => token;
+    public Token Token => token;
       
     public TsExpression Condition => condition;
 }

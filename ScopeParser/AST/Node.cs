@@ -6,7 +6,7 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public abstract class Node {
-    public abstract T Visit<T>(INodeVisitor<T> visitor);
-    public abstract Token Token { get; }
+public interface Node {
+    public T Visit<T>(INodeVisitor<T> visitor);
+    public Token Token { get; }
 }

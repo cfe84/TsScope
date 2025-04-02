@@ -8,12 +8,12 @@ namespace ScopeParser.Ast;
 
 public class Identifier(Token token, string value) : Source {
       
-    public override T Visit<T>(INodeVisitor<T> visitor)
+    public T Visit<T>(INodeVisitor<T> visitor)
     {
         return visitor.VisitIdentifier(this);
     }
 
-    public override Token Token => token;
+    public Token Token => token;
       
     public string Value => value;
 }

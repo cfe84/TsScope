@@ -8,12 +8,12 @@ namespace ScopeParser.Ast;
 
 public class Output(Token token, Source source, string outputFile) : Statement {
       
-    public override T Visit<T>(INodeVisitor<T> visitor)
+    public T Visit<T>(INodeVisitor<T> visitor)
     {
         return visitor.VisitOutput(this);
     }
 
-    public override Token Token => token;
+    public Token Token => token;
       
     public Source Source => source;
 

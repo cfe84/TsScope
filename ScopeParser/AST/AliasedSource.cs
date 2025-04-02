@@ -6,15 +6,17 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class FieldList(Token token, Field[] fields) : FieldSpec {
+public class AliasedSource(Token token, Source source, Identifier alias) : AliasableSource {
       
     public T Visit<T>(INodeVisitor<T> visitor)
     {
-        return visitor.VisitFieldList(this);
+        return visitor.VisitAliasedSource(this);
     }
 
     public Token Token => token;
       
-    public Field[] Fields => fields;
+    public Source Source => source;
+
+    public Identifier Alias => alias;
 }
       

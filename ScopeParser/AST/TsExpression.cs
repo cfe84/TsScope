@@ -8,12 +8,12 @@ namespace ScopeParser.Ast;
 
 public class TsExpression(Token token, string expression) : Node {
       
-    public override T Visit<T>(INodeVisitor<T> visitor)
+    public T Visit<T>(INodeVisitor<T> visitor)
     {
         return visitor.VisitTsExpression(this);
     }
 
-    public override Token Token => token;
+    public Token Token => token;
       
     public string Expression => expression;
 }

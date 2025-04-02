@@ -5,35 +5,37 @@ const path = require('path');
 function run() {
   const outputDirectory = getOutputDir();
   const terminalTypes = {
-    "Script": ["Statement[] statements"],
-    "WhereStatement": ["TsExpression condition"],
+    "AliasedSource": ["Source source", "Identifier alias"],
     "Assignment":  ["Identifier variableName", "Source source"],
-    "FileSource": ["FieldSpec fieldSpec", "string fileName"],
-    "FieldList": ["Field[] fields"],
-    "Star": [],
     "Field": ["string name", "string? ns"],
+    "FieldList": ["Field[] fields"],
+    "FileSource": ["FieldSpec fieldSpec", "string fileName"],
     "Identifier": ["string value"],
-    "SelectQuery": ["FieldSpec fields", "SelectSource source", "WhereStatement? where"],
+    "JoinQuery": ["SelectSource left", "AliasableSource right", "JoinType joinType", "TsExpression condition"],
     "Output": ["Source source", "string outputFile"],
-    "JoinQuery": ["SelectSource left", "Source right", "JoinType joinType", "TsExpression condition"],
+    "SelectQuery": ["FieldSpec fields", "SelectSource source", "WhereStatement? where"],
+    "Script": ["Statement[] statements"],
+    "Star": [],
     "TsExpression": ["string expression"],
+    "WhereStatement": ["TsExpression condition"],
   };
   const compositeTypes = {
     "Statement": ["Assignment", "Output"],
     "Source": ["FileSource", "SelectQuery", "Identifier"],
-    "SelectSource": ["Source", "JoinQuery"],
+    "AliasableSource": ["Source", "AliasedSource"],
+    "SelectSource": ["AliasableSource", "JoinQuery"],
     "FieldSpec": ["FieldList", "Star"],
   };
   const types = {};
   for (const [type, fields] of Object.entries(terminalTypes)) {
-    const compositedIn = Object.keys(compositeTypes).find(key => compositeTypes[key].indexOf(type) >= 0);
-    const parentType = compositedIn || "Node";
-    types[type] = { parentType, fields, isComposite: false };
+    const compositedIn = Object.keys(compositeTypes).filter(key => compositeTypes[key].indexOf(type) >= 0);
+    const parentTypes = compositedIn.length > 0 ? compositedIn : ["Node"];
+    types[type] = { parentTypes, fields, isComposite: false };
   };
   for (const type of Object.keys(compositeTypes)) {
-    const compositedIn = Object.keys(compositeTypes).find(key => compositeTypes[key].indexOf(type) >= 0);
-    const parentType = compositedIn || "Node";
-    types[type] = { parentType, fields: [], isComposite: true };
+    const compositedIn = Object.keys(compositeTypes).filter(key => compositeTypes[key].indexOf(type) >= 0);
+    const parentTypes = compositedIn.length > 0 ? compositedIn : ["Node"];
+    types[type] = { parentTypes, fields: [], isComposite: true };
   }
   createAst(outputDirectory, "Node", types);
 }
@@ -76,18 +78,18 @@ function createType(outputDirectory, name, config, baseName) {
   const parameters = `(${["Token token"].concat(config.fields).join(', ')})`;
   if (config.isComposite) {
     fs.writeFileSync(basePath, `${header}
-public abstract class ${name} : ${config.parentType} {}
+public interface ${name} : ${config.parentTypes.join(", ")} {}
 `);
   } else {
     fs.writeFileSync(basePath, `${header}
-public class ${name}${parameters} : ${config.parentType} {
+public class ${name}${parameters} : ${config.parentTypes.join(", ")} {
       
-    public override T Visit<T>(I${baseName}Visitor<T> visitor)
+    public T Visit<T>(I${baseName}Visitor<T> visitor)
     {
         return visitor.Visit${name}(this);
     }
 
-    public override Token Token => token;
+    public Token Token => token;
       
 ${config.fields.map(field => generateFieldGetter(field)).join('\n\n')}
 }
@@ -98,9 +100,9 @@ ${config.fields.map(field => generateFieldGetter(field)).join('\n\n')}
 function createBaseNode(outputDirectory, baseName) {
   const basePath = path.join(outputDirectory, `${baseName}.cs`);
   fs.writeFileSync(basePath, `${header}
-public abstract class ${baseName} {
-    public abstract T Visit<T>(I${baseName}Visitor<T> visitor);
-    public abstract Token Token { get; }
+public interface ${baseName} {
+    public T Visit<T>(I${baseName}Visitor<T> visitor);
+    public Token Token { get; }
 }
 `);
 }

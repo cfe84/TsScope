@@ -8,12 +8,12 @@ namespace ScopeParser.Ast;
 
 public class Star(Token token) : FieldSpec {
       
-    public override T Visit<T>(INodeVisitor<T> visitor)
+    public T Visit<T>(INodeVisitor<T> visitor)
     {
         return visitor.VisitStar(this);
     }
 
-    public override Token Token => token;
+    public Token Token => token;
       
 
 }

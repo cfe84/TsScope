@@ -156,11 +156,11 @@ namespace ScopeParser.Parsing
         }
 
         /// <summary>
-        /// <SELECT_SOURCE> = <JOIN_QUERY> | <SOURCE>
+        /// <SELECT_SOURCE> = <JOIN_QUERY> | <ALIASABLE_SOURCE>
         /// </summary>
         private SelectSource ParseSelectSource()
         {
-            var source = parseSource();
+            var source = parseAliasableSource();
             // Parsing join is different because it's
             // right associative. This method returns source
             // if no join is found.
@@ -169,7 +169,7 @@ namespace ScopeParser.Parsing
         }
 
         /// <summary>
-        /// <JOIN_QUERY> = <SELECT_SOURCE> <JOIN_TYPE> <SOURCE> "ON" <TS_EXPRESSION>
+        /// <JOIN_QUERY> = <SELECT_SOURCE> <JOIN_TYPE> <ALIASABLE_SOURCE> "ON" <TS_EXPRESSION>
         /// </summary>
         private SelectSource parseJoinQuery(SelectSource left)
         {
@@ -188,12 +188,25 @@ namespace ScopeParser.Parsing
                     _ => throw new ParseError("Invalid join type", joinTypeToken)
                 };
                 expect(TokenType.Join, "JOIN");
-                var right = parseSource();
+                var right = parseAliasableSource();
                 expect(TokenType.On, "ON");
                 var condition = parseTsExpression();
                 left = new JoinQuery(joinTypeToken, left, right, joinType, condition);
             }
             return left;
+        }
+
+        private AliasableSource parseAliasableSource()
+        {
+            var source = parseSource();
+            if (source == null)
+                throw new ParseError("Expected source", next());
+            if (match(TokenType.As))
+            {
+                var alias = parseIdentifier(true)!;
+                return new AliasedSource(source.Token, source, alias);
+            }
+            return source;
         }
 
         /// <summary>

@@ -8,12 +8,12 @@ namespace ScopeParser.Ast;
 
 public class Field(Token token, string name, string? ns) : Node {
       
-    public override T Visit<T>(INodeVisitor<T> visitor)
+    public T Visit<T>(INodeVisitor<T> visitor)
     {
         return visitor.VisitField(this);
     }
 
-    public override Token Token => token;
+    public Token Token => token;
       
     public string Name => name;
 
