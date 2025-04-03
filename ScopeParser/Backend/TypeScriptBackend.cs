@@ -9,16 +9,20 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     public string Visit(Node node) => node.Visit(this);
     private Dictionary<string, int> variableCount = new();
     private List<string> conditions = new();
+    private List<string> recordMappers = new();
     private int outputCount = 0;
+    private int recordMapperCount = 0;
 
     public string VisitScript(Script node)
     {
         var statements = node.Statements.Select(Visit).ToList();
         var conditionsStr = string.Join("\n", conditions);
+        var recordMappersStr = string.Join("\n", recordMappers);
         // The main script snippet contains all the boiler plate. Statements are just inserted in its midst
         return snippetProvider.GetSnippet("script",
             ("statements", string.Join("\n", statements)),
-            ("conditions", conditionsStr)
+            ("conditions", conditionsStr),
+            ("recordMappers", recordMappersStr)
         );
     }
 
@@ -46,21 +50,25 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitInputField(InputField field)
     {
-        // Account for qualified names:
-        if (field.Ns != null)
-            return field.Ns + "." + field.Name;
-        return field.Name;
+        return snippetProvider.GetSnippet("inputField",
+            ("name", field.Name),
+            ("namespace", field.Ns != null ? $"\"{field.Ns}\"" : "undefined")
+        );
     }
 
     public string VisitFieldList(FieldList node)
     {
         var fields = node.Fields.Select(Visit).ToList();
         // Fields are injected as a string list into the snippet.
-        fields = fields.Select(field => "\"" + field + "\"").ToList();
+        var mapRecord = string.Join(",\n", fields);
+        var id = recordMapperCount++;
+        var mapper = snippetProvider.GetSnippet("recordMapper",
+            ("mapRecord", mapRecord),
+            ("id", id.ToString())
+        );
+        recordMappers.Add(mapper);
         return snippetProvider.GetSnippet("fieldList",
-            ("fields", string.Join(", ", fields)),
-            // Todo: This could be refined to give the exact position of the missing field.
-            ("position", node.Token.ToString().Replace("\"", "\\\""))
+            ("id", id.ToString())
         );
     }
 

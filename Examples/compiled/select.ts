@@ -1,6 +1,17 @@
 import * as fs from "fs";
 import * as path from "path";
 
+/*************
+ * The following code is a boilerplate for the script.
+ * "Custom" code is inserted lower down.
+ */
+
+///////////////////////////////////////////////
+//                                           //
+//             Start boilerplate             //
+//                                           //
+///////////////////////////////////////////////
+
 interface QualifiedName {
   name: string;
   namespace?: string;
@@ -19,14 +30,43 @@ interface FieldsSpec {
   };
 }
 
-const star: FieldsSpec = {
-  fieldFilter: (_: QualifiedName) => true,
-  missingFields: (_: QualifiedName[]) => ({ result: [], position: "" }),
-};
+abstract class RecordMapper {
+  abstract map(record: SourceRecord): SourceRecord;
 
-type Record = Field[];
+  private fieldPositions: Record<string, number> = {};
 
-function recordToObject(record: Record): { [key: string]: any } {
+  protected findField(
+    input: SourceRecord,
+    namespace: string | undefined,
+    name: string
+  ) {
+    const dictionaryIndex = `${namespace}.${name}`;
+
+    let index = this.fieldPositions[dictionaryIndex];
+
+    if (index === undefined) {
+      index = input.findIndex(
+        (field) =>
+          (!namespace || field.name.namespace === namespace) &&
+          field.name.name === name
+      );
+      if (index === -1) {
+        throw new Error(`Field ${dictionaryIndex} not found`);
+      }
+      this.fieldPositions[dictionaryIndex] = index;
+    }
+
+    return input[index].value;
+  }
+}
+
+class StarRecordMapper extends RecordMapper {
+  map = (record: SourceRecord) => record;
+}
+
+type SourceRecord = Field[];
+
+function recordToObject(record: SourceRecord): { [key: string]: any } {
   const obj: { [key: string]: any } = {};
   // We give precedence to namespaces. If a field is conflicting
   // with a namespace, it should be ignored.
@@ -55,8 +95,7 @@ function recordToObject(record: Record): { [key: string]: any } {
 }
 
 interface IConsumer {
-  receiveRecord(source: Source, record: Record): void;
-  receiveSchema(source: Source, schema: QualifiedName[]): void;
+  receiveRecord(source: Source, record: SourceRecord): void;
   done(source: Source): void;
 }
 
@@ -64,7 +103,7 @@ interface IConsumer {
 type FieldsFilter = (field: QualifiedName) => boolean;
 // Check if all the fields we're expecting are in the list.
 type FieldCheck = (field: QualifiedName[]) => string | true;
-type RecordFilter = (record: Record) => boolean;
+type RecordFilter = (record: SourceRecord) => boolean;
 
 abstract class Source {
   private static sourceCount = 0;
@@ -79,12 +118,8 @@ abstract class Source {
     this.consumers.push(consumer);
   }
 
-  protected notifyConsumers(record: Record): void {
+  protected notifyConsumers(record: SourceRecord): void {
     this.consumers.forEach((consumer) => consumer.receiveRecord(this, record));
-  }
-
-  protected notifyConsumersSchema(schema: QualifiedName[]): void {
-    this.consumers.forEach((consumer) => consumer.receiveSchema(this, schema));
   }
 
   protected notifyConsumersDone(): void {
@@ -103,7 +138,7 @@ interface IStartable {
 class FileSource extends Source implements IStartable {
   private fields: QualifiedName[] = [];
 
-  constructor(filePath: string, private fieldsSpec: FieldsSpec) {
+  constructor(filePath: string, private recordMapper: RecordMapper) {
     super();
     this.file = fs.createReadStream(filePath);
     startable.push(this);
@@ -142,30 +177,12 @@ class FileSource extends Source implements IStartable {
         name: field,
         namespace: undefined,
       }));
-      const missingFields = this.fieldsSpec.missingFields(this.fields);
-      if (missingFields.result.length > 0) {
-        throw new Error(
-          `Missing field(s) in ${
-            missingFields.position
-          }: ${missingFields.result.join(", ")}`
-        );
-      }
-      this.notifyConsumersSchema(
-        this.fields.filter(this.fieldsSpec.fieldFilter)
-      );
     } else {
-      const record = this.fields
-        .map((field, index) => {
-          if (!this.fieldsSpec.fieldFilter(field)) {
-            return;
-          }
-          const value = valuesInLine[index];
-          return {
-            name: field,
-            value: value,
-          };
-        })
-        .filter((field) => field !== undefined);
+      const thisRecord = valuesInLine.map((value, i) => ({
+        name: this.fields[i],
+        value,
+      }));
+      const record = this.recordMapper.map(thisRecord);
       this.notifyConsumers(record);
     }
   }
@@ -176,37 +193,21 @@ class FileSource extends Source implements IStartable {
 class SelectQuerySource extends Source implements IConsumer {
   constructor(
     private source: Source,
-    private fieldsSpec: FieldsSpec,
+    private recordMapper: RecordMapper,
     private where?: RecordFilter
   ) {
     super();
     source.registerConsumer(this);
   }
 
-  receiveSchema(_: Source, schema: QualifiedName[]): void {
-    const missingFields = this.fieldsSpec.missingFields(schema);
-    if (missingFields.result.length > 0) {
-      throw new Error(
-        `Missing field(s) in ${
-          missingFields.position
-        }: ${missingFields.result.join(", ")}`
-      );
-    }
-
-    this.notifyConsumersSchema(
-      schema.filter((field) => this.fieldsSpec.fieldFilter(field))
-    );
-  }
-
-  receiveRecord(_: Source, record: Record): void {
+  receiveRecord(_: Source, record: SourceRecord): void {
     if (this.where && !this.where(record)) {
       return;
     }
-    const result = record.filter((field) =>
-      this.fieldsSpec.fieldFilter(field.name)
-    );
 
-    this.notifyConsumers(result);
+    const mappedRecord = this.recordMapper.map(record);
+
+    this.notifyConsumers(mappedRecord);
   }
 }
 
@@ -216,20 +217,12 @@ class NamedSource extends Source implements IConsumer {
     source.registerConsumer(this);
   }
 
-  receiveRecord(_: Source, record: Record): void {
+  receiveRecord(_: Source, record: SourceRecord): void {
     const newRecord = record.map((field) => ({
       name: { ...field.name, namespace: this.name },
       value: field.value,
     }));
     this.notifyConsumers(newRecord);
-  }
-
-  receiveSchema(_: Source, schema: QualifiedName[]): void {
-    const newSchema = schema.map((field) => ({
-      ...field,
-      namespace: this.name,
-    }));
-    this.notifyConsumersSchema(newSchema);
   }
 }
 
@@ -239,7 +232,7 @@ enum JoinType {
   Right = "Right",
 }
 
-type JoinCondition = (record: Record) => boolean;
+type JoinCondition = (record: SourceRecord) => boolean;
 
 // This can be heavily optimized. A proper join algorithm should be used.
 // This is a naive implementation that just iterates over the records and saves
@@ -256,14 +249,14 @@ class JoinSource extends Source implements IConsumer {
     right.registerConsumer(this);
   }
 
-  private leftRecords: Record[] = [];
-  private rightRecords: Record[] = [];
+  private leftRecords: SourceRecord[] = [];
+  private rightRecords: SourceRecord[] = [];
   private leftSchema: QualifiedName[] = [];
   private rightSchema: QualifiedName[] = [];
   private leftDone: boolean = false;
   private rightDone: boolean = false;
 
-  receiveRecord(source, record: Record): void {
+  receiveRecord(source, record: SourceRecord): void {
     if (source === this.left) {
       this.leftRecords.push(record);
     } else if (source === this.right) {
@@ -292,7 +285,6 @@ class JoinSource extends Source implements IConsumer {
   }
 
   private start(): void {
-    this.notifyConsumersSchema(this.leftSchema.concat(this.rightSchema));
     if (this.joinType === JoinType.Inner) {
       this.innerJoin();
     }
@@ -317,20 +309,30 @@ interface IClosableOutput {
 }
 
 class FileOutput implements IConsumer, IClosableOutput {
+  private wroteHeader: boolean = false;
+
   constructor(private filePath: string) {}
 
   done(source: Source): void {
     this.close();
   }
 
-  receiveRecord(_: Source, record: Record): void {
+  receiveRecord(_: Source, record: SourceRecord): void {
+    if (!this.wroteHeader) {
+      this.writeHeader(
+        _,
+        record.map((field) => field.name)
+      );
+    }
+
     fs.appendFileSync(
       this.filePath,
       record.map((field) => field.value).join(",") + "\n"
     );
   }
 
-  receiveSchema(_: Source, schema: QualifiedName[]): void {
+  private writeHeader(_: Source, schema: QualifiedName[]): void {
+    this.wroteHeader = true;
     fs.writeFileSync(
       this.filePath,
       schema.map((field) => field.name).join(",") + "\n"
@@ -349,43 +351,99 @@ const closableOutputs: IClosableOutput[] = [];
 //                                           //
 ///////////////////////////////////////////////
 
+// This is where your script code starts.
 
-const input_0 = new NamedSource(new FileSource("inputs/users.csv", {
-    fieldFilter: (field: QualifiedName) => ["id", "firstName", "age"]
-        // TODO: Fix for namespace 
-        .includes(field.name) || ["id", "firstName", "age"].includes(`${field.namespace}.${field.name}`),
-    missingFields: (fields: QualifiedName[]) => {
-        const fieldNames = fields.map((field) => field.name);
-        const qualifiedNames = fields.map((field) => field.namespace + "." + field.name);
-        // TODO: Fix for namespace 
-        const result = ["id", "firstName", "age"].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
-        return { result, position: "Identifier \"id\" (line 1, column 17)" };
-    }
-}), "input");
-const fields_0 = new NamedSource(new SelectQuerySource(input_0, {
-    fieldFilter: (field: QualifiedName) => ["id", "firstName", "age"]
-        // TODO: Fix for namespace 
-        .includes(field.name) || ["id", "firstName", "age"].includes(`${field.namespace}.${field.name}`),
-    missingFields: (fields: QualifiedName[]) => {
-        const fieldNames = fields.map((field) => field.name);
-        const qualifiedNames = fields.map((field) => field.namespace + "." + field.name);
-        // TODO: Fix for namespace 
-        const result = ["id", "firstName", "age"].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
-        return { result, position: "Identifier \"id\" (line 2, column 17)" };
-    }
-}, undefined), "fields");
-const filtered_0 = new NamedSource(new SelectQuerySource(fields_0, {
-    fieldFilter: (field: QualifiedName) => ["firstName", "age"]
-        // TODO: Fix for namespace 
-        .includes(field.name) || ["firstName", "age"].includes(`${field.namespace}.${field.name}`),
-    missingFields: (fields: QualifiedName[]) => {
-        const fieldNames = fields.map((field) => field.name);
-        const qualifiedNames = fields.map((field) => field.namespace + "." + field.name);
-        // TODO: Fix for namespace 
-        const result = ["firstName", "age"].filter((field) => !(qualifiedNames.includes(field) || fieldNames.includes(field)));
-        return { result, position: "Identifier \"firstName\" (line 3, column 19)" };
-    }
-}, (record: any) => {
+class RecordMapper_0 extends RecordMapper {
+  map(input: SourceRecord): SourceRecord {
+    const output: SourceRecord = [
+      {
+    name: {
+        namespace: undefined,
+        name: "id",
+    },
+    value: this.findField(input, undefined, "id"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "firstName",
+    },
+    value: this.findField(input, undefined, "firstName"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "roleId",
+    },
+    value: this.findField(input, undefined, "roleId"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "age",
+    },
+    value: this.findField(input, undefined, "age"),
+}
+    ];
+    return output;
+  }
+}
+
+class RecordMapper_1 extends RecordMapper {
+  map(input: SourceRecord): SourceRecord {
+    const output: SourceRecord = [
+      {
+    name: {
+        namespace: undefined,
+        name: "id",
+    },
+    value: this.findField(input, undefined, "id"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "firstName",
+    },
+    value: this.findField(input, undefined, "firstName"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "age",
+    },
+    value: this.findField(input, undefined, "age"),
+}
+    ];
+    return output;
+  }
+}
+
+class RecordMapper_2 extends RecordMapper {
+  map(input: SourceRecord): SourceRecord {
+    const output: SourceRecord = [
+      {
+    name: {
+        namespace: undefined,
+        name: "firstName",
+    },
+    value: this.findField(input, undefined, "firstName"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "age",
+    },
+    value: this.findField(input, undefined, "age"),
+}
+    ];
+    return output;
+  }
+}
+
+
+const input_0 = new NamedSource(new FileSource("inputs/users.csv", new RecordMapper_0()), "input");
+const fields_0 = new NamedSource(new SelectQuerySource(input_0, new RecordMapper_1(), undefined), "fields");
+const filtered_0 = new NamedSource(new SelectQuerySource(fields_0, new RecordMapper_2(), (record: any) => {
     record = recordToObject(record);
     Object.assign(globalThis, record);
     const res = // Condition must be on new line to accomodate for the tsIgnore flag

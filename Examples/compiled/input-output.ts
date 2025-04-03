@@ -353,9 +353,54 @@ const closableOutputs: IClosableOutput[] = [];
 
 // This is where your script code starts.
 
-/*%recordMappers%*/
-/*%conditions%*/
-/*%statements%*/
+class RecordMapper_0 extends RecordMapper {
+  map(input: SourceRecord): SourceRecord {
+    const output: SourceRecord = [
+      {
+        name: {
+          namespace: undefined,
+          name: "id",
+        },
+        value: this.findField(input, undefined, "id"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "firstName",
+        },
+        value: this.findField(input, undefined, "firstName"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "roleId",
+        },
+        value: this.findField(input, undefined, "roleId"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "age",
+        },
+        value: this.findField(input, undefined, "age"),
+      },
+    ];
+    return output;
+  }
+}
+
+const RecordMapper_1 = RecordMapper_0;
+
+const input_0 = new NamedSource(
+  new FileSource("inputs/users.csv", new RecordMapper_0()),
+  "input"
+);
+const output_0 = new FileOutput("outputs/input-output_load_and_output.csv");
+input_0.registerConsumer(output_0);
+const output_1 = new FileOutput("outputs/input-output_direct_copy.csv");
+new FileSource("inputs/users.csv", new RecordMapper_1()).registerConsumer(
+  output_1
+);
 
 ///////////////////////////////////////////////
 //                                           //

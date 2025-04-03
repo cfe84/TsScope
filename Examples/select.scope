@@ -1,4 +1,4 @@
-input = EXTRACT id, firstName, age FROM "inputs/users.csv";
+input = EXTRACT id, firstName, roleId, age FROM "inputs/users.csv";
 fields = SELECT id, firstName, age FROM input;
 filtered = SELECT firstName, age FROM fields WHERE { age > 30 };
 OUTPUT fields TO "outputs/select_fields.csv";
