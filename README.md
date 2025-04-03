@@ -69,7 +69,7 @@ This compiler is using this syntax:
 <ALPHA_NUM> ::= [a-zA-Z_][a-zA-Z0-9_-]*
 <TEXT> ::= [^\n]*
 <EOL> ::= \n
-<TS_EXPRESSION> ::= '{' [^}]+ '}'
+<TS_EXPRESSION> ::= '{{' [^}]+ '}}'
 ```
 
 Conditions and filtering are done using Typescript expressions, which are encapsulated using `{  }` for parsing simplicity. Closing brackets within must be escaped using `\}`.

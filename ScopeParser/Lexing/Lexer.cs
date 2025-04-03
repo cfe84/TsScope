@@ -205,7 +205,11 @@ public class Lexer(string source)
     {
         var str = new StringBuilder();
         var isEscaped = false;
-        while (!isFinished() && (peek() != '}' || isEscaped))
+        if (next() != '{')
+        {
+            throw new LexError("Unexpected character '{'", startingLine, startingColumn);
+        }
+        while (!isFinished() && (peek(2) != "}}" || isEscaped))
         {
             if (peek() == '\\')
             {
@@ -223,7 +227,7 @@ public class Lexer(string source)
         {
             throw new LexError("Unterminated typescript expression", startingLine, startingColumn);
         }
-        next();
+        next(2);
         return new Token(TokenType.TsExpression, str.ToString().Trim(), startingLine, startingColumn);
     }
 

@@ -236,18 +236,20 @@ public class LexerTest
         tokens[1].Value.Should().Be(value);
     }
 
-    [Fact]
-    public void TestUnexpectedCharacter()
+    [Theory]
+    [InlineData("%")]
+    [InlineData("{")]
+    public void TestUnexpectedCharacter(string input)
     {
         // Given
-        var source = "something fishy %";
+        var source = $"something fishy {input} in there";
         var lexer = new Lexer(source);
 
         // When
         Action action = () => lexer.Scan().ToList();
 
         // Then
-        action.Should().Throw<LexError>().WithMessage("Unexpected character '%'");
+        action.Should().Throw<LexError>().WithMessage($"Unexpected character '{input}'");
     }
 
     [Theory]
@@ -271,9 +273,9 @@ public class LexerTest
     }
 
     [Theory]
-    [InlineData("{dfsfs.toString()}")]
-    [InlineData("{dfsfs.toString(); \n another line}")]
-    [InlineData("{ \"This string has \\}\" }")]
+    [InlineData("{{dfsfs.toString()}}")]
+    [InlineData("{{dfsfs.toString(); \n another line}}")]
+    [InlineData("{{ \"This string has \\}}\" }}")]
     public void TestTsExpression(string input)
     {
         // Given
@@ -287,14 +289,14 @@ public class LexerTest
         CheckTokens([TokenType.TsExpression, TokenType.Star, TokenType.EndOfFile], tokens);
         tokens[0].Line.Should().Be(2);
         tokens[0].Column.Should().Be(2);
-        tokens[0].ValueAs<string>().Should().Be(input.Substring(1, input.Length - 2).Trim());
+        tokens[0].ValueAs<string>().Should().Be(input.Substring(2, input.Length - 4).Trim());
     }
 
     [Fact]
     public void TestUnclosedTsExpression()
     {
         // Given
-        var source = "/* A comment */ \n {this is an unclosed ts expression \n*";
+        var source = "/* A comment */ \n {{this is an unclosed ts expression \n*";
         var lexer = new Lexer(source);
 
         // When

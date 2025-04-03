@@ -5,5 +5,5 @@ OUTPUT fields TO "outputs/select--alias.csv";
 OUTPUT where TO "outputs/select--alias_where.csv";
 OUTPUT
     SELECT id AS someId, name AS someName, age AS anotherAge 
-    FROM fields WHERE {age > 30} 
+    FROM fields WHERE {{age > 30}} 
     TO "outputs/select--alias_where2.csv";
