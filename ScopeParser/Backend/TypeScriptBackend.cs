@@ -1,6 +1,7 @@
 namespace ScopeParser.Backend;
 
 using System.Text.RegularExpressions;
+using Microsoft.VisualBasic;
 using ScopeParser.Ast;
 using ScopeParser.Lexing;
 
@@ -48,17 +49,10 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         );
     }
 
-    public string VisitInputField(InputField field)
-    {
-        return snippetProvider.GetSnippet("inputField",
-            ("name", field.Name),
-            ("namespace", field.Ns != null ? $"\"{field.Ns}\"" : "undefined")
-        );
-    }
-
     public string VisitFieldList(FieldList node)
     {
-        var fields = node.Fields.Select(Visit).ToList();
+        var fields = node.Fields.Select(VisitFieldForFieldSpec);
+
         // Fields are injected as a string list into the snippet.
         var mapRecord = string.Join(",\n", fields);
         var id = recordMapperCount++;
@@ -70,6 +64,47 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         return snippetProvider.GetSnippet("fieldList",
             ("id", id.ToString())
         );
+    }
+
+    /// <summary>
+    /// Visiting a field is slightly different because of aliases
+    /// </summary>
+    /// <param name="node"></param>
+    /// <returns></returns>
+    private string VisitFieldForFieldSpec(Field field)
+    {
+        var ns = "undefined";
+        var name = string.Empty;
+
+        if (field is AliasedField aliasedField)
+        {
+            name = aliasedField.Alias;
+        }
+        else if (field is InputField inputField)
+        {
+            name = inputField.Name;
+            ns = inputField.Ns != null ? $"\"{inputField.Ns}\"" : "undefined";
+        }
+
+        var value = Visit(field);
+        return snippetProvider.GetSnippet("field",
+            ("name", name),
+            ("namespace", ns),
+            ("value", value)
+        );
+    }
+
+    public string VisitInputField(InputField field)
+    {
+        return snippetProvider.GetSnippet("inputField",
+            ("name", field.Name),
+            ("namespace", field.Ns != null ? $"\"{field.Ns}\"" : "undefined")
+        );
+    }
+
+    public string VisitAliasedField(AliasedField field)
+    {
+        return Visit(field.Field);
     }
 
     public string VisitFileSource(FileSource node)
@@ -163,10 +198,5 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
             ("source", source),
             ("alias", alias)
         );
-    }
-
-    public string VisitAliasedField(AliasedField node)
-    {
-        throw new NotImplementedException();
     }
 }

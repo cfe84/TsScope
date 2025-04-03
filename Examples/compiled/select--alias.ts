@@ -359,57 +359,145 @@ class RecordMapper_0 extends RecordMapper {
       {
     name: {
         namespace: undefined,
+        name: "id",
+    },
+    value: this.findField(input, undefined, "id"),
+},
+{
+    name: {
+        namespace: undefined,
         name: "name",
     },
-    value: this.findField(input, "users", "firstName"),
+    value: this.findField(input, undefined, "firstName"),
 },
 {
     name: {
         namespace: undefined,
-        name: "role",
+        name: "roleId",
     },
-    value: this.findField(input, "roles", "roleName"),
+    value: this.findField(input, undefined, "roleId"),
 },
 {
     name: {
         namespace: undefined,
-        name: "country",
+        name: "age",
     },
-    value: this.findField(input, undefined, "countryName"),
+    value: this.findField(input, undefined, "age"),
 }
     ];
     return output;
   }
 }
 
-function condition_0(record) {
-  record = recordToObject(record);
-  Object.assign(globalThis, record);
-  const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    country.countryCode === users.country;
-  return res;
+class RecordMapper_1 extends RecordMapper {
+  map(input: SourceRecord): SourceRecord {
+    const output: SourceRecord = [
+      {
+    name: {
+        namespace: undefined,
+        name: "id",
+    },
+    value: this.findField(input, undefined, "id"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "name",
+    },
+    value: this.findField(input, undefined, "name"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "anotherCopyOfName",
+    },
+    value: this.findField(input, undefined, "name"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "age",
+    },
+    value: this.findField(input, undefined, "age"),
+}
+    ];
+    return output;
+  }
 }
 
-function condition_1(record) {
-  record = recordToObject(record);
-  Object.assign(globalThis, record);
-  const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    users.roleId === roles.id;
-  return res;
+class RecordMapper_2 extends RecordMapper {
+  map(input: SourceRecord): SourceRecord {
+    const output: SourceRecord = [
+      {
+    name: {
+        namespace: undefined,
+        name: "id",
+    },
+    value: this.findField(input, undefined, "id"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "name",
+    },
+    value: this.findField(input, undefined, "name"),
+}
+    ];
+    return output;
+  }
 }
 
-const input_0 = new NamedSource(new FileSource("inputs/users.csv", new StarRecordMapper()), "input");
-const roles_0 = new NamedSource(new FileSource("inputs/role.csv", new StarRecordMapper()), "roles");
-const country_0 = new NamedSource(new FileSource("inputs/country.csv", new StarRecordMapper()), "country");
-const withCountry_0 = new NamedSource(new SelectQuerySource(new JoinSource(new JoinSource(new NamedSource(input_0, "users"), roles_0, condition_1, JoinType.Inner), country_0, condition_0, JoinType.Inner), new RecordMapper_0(), (record: any) => {
+class RecordMapper_3 extends RecordMapper {
+  map(input: SourceRecord): SourceRecord {
+    const output: SourceRecord = [
+      {
+    name: {
+        namespace: undefined,
+        name: "someId",
+    },
+    value: this.findField(input, undefined, "id"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "someName",
+    },
+    value: this.findField(input, undefined, "name"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "anotherAge",
+    },
+    value: this.findField(input, undefined, "age"),
+}
+    ];
+    return output;
+  }
+}
+
+
+const input_0 = new NamedSource(new FileSource("inputs/users.csv", new RecordMapper_0()), "input");
+const fields_0 = new NamedSource(new SelectQuerySource(input_0, new RecordMapper_1(), undefined), "fields");
+const where_0 = new NamedSource(new SelectQuerySource(fields_0, new RecordMapper_2(), (record: any) => {
     record = recordToObject(record);
     Object.assign(globalThis, record);
     const res = // Condition must be on new line to accomodate for the tsIgnore flag
-        age >= 30 && roles.roleName === 'Guest'
+        fields.age >= 30
     return res;
-}), "withCountry");
-const output_0 = new FileOutput("outputs/join--two_joins_with_alias.csv");
-withCountry_0.registerConsumer(output_0);
+}), "where");
+const output_0 = new FileOutput("outputs/select--alias.csv");
+fields_0.registerConsumer(output_0);
+const output_1 = new FileOutput("outputs/select--alias_where.csv");
+where_0.registerConsumer(output_1);
+const output_2 = new FileOutput("outputs/select--alias_where2.csv");
+new SelectQuerySource(fields_0, new RecordMapper_3(), (record: any) => {
+    record = recordToObject(record);
+    Object.assign(globalThis, record);
+    const res = // Condition must be on new line to accomodate for the tsIgnore flag
+        age > 30
+    return res;
+}).registerConsumer(output_2);
 
 ///////////////////////////////////////////////
 //                                           //

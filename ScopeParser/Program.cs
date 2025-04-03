@@ -82,6 +82,11 @@ class Program
       Console.Error.WriteLine($"File {input} is not a .scope file.");
       return;
     }
+    if (Path.GetExtension(output) == "")
+    {
+      var file = Path.GetFileNameWithoutExtension(input);
+      output = Path.Combine(output, file + ".ts");
+    }
     if (Path.GetExtension(output) != ".ts")
     {
       Console.Error.WriteLine($"File {output} is not a .ts file.");

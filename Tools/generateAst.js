@@ -21,12 +21,12 @@ function run() {
     "WhereStatement": ["TsExpression condition"],
   };
   const compositeTypes = {
-    "Statement": ["Assignment", "Output"],
-    "Source": ["FileSource", "SelectQuery", "Identifier"],
     "AliasableSource": ["Source", "AliasedSource"],
-    "SelectSource": ["AliasableSource", "JoinQuery"],
     "Field": ["InputField", "AliasedField"], // TODO: add a ts expression
     "FieldSpec": ["FieldList", "Star"],
+    "SelectSource": ["AliasableSource", "JoinQuery"],
+    "Source": ["FileSource", "SelectQuery", "Identifier"],
+    "Statement": ["Assignment", "Output"],
   };
   const types = {};
   for (const [type, fields] of Object.entries(terminalTypes)) {
