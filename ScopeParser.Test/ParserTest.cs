@@ -305,6 +305,43 @@ public class ParserTest
     }
 
     [Fact]
+    public void TestSelectLiterals()
+    {
+        // Given
+        var source = new List<Token> {
+            new Token(TokenType.Identifier, "output", 1, 1),
+            fromTokenType(TokenType.Equal),
+            fromTokenType(TokenType.Select),
+            new Token(TokenType.String, "string_value", 1, 7),
+            fromTokenType(TokenType.As),
+            new Token(TokenType.Identifier, "string_value_alias", 1, 8),
+            fromTokenType(TokenType.Comma),
+            new Token(TokenType.Decimal, 1.5m, 1, 7),
+            fromTokenType(TokenType.Comma),
+            new Token(TokenType.Boolean, false, 1, 5),
+            fromTokenType(TokenType.From),
+            new Token(TokenType.Identifier, "input", 1, 5),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script);
+        var assignment = validateAssignment(script.Statements[0], "output");
+        var select = validateSelectQuery(assignment.Source);
+        var fieldList = validateFieldList(select.Fields, 3);
+        var stringField = validateAliasedField(fieldList.Fields[0], "string_value_alias");
+        ValidateStringLiteral(stringField.Field, "string_value");
+
+        ValidateNumberLiteral(fieldList.Fields[1], 1.5m);
+        ValidateBooleanLiteral(fieldList.Fields[2], false);
+    }
+
+    [Fact]
     public void TestOneJoin()
     {
         // Given
@@ -547,6 +584,28 @@ public class ParserTest
         var expression = (TsExpression)node;
         expression.Expression.Should().Be(expected);
         return expression;
+    }
+
+    private StringLiteral ValidateStringLiteral(Field field, string expectedValue)
+    {
+        field.Should().BeOfType<StringLiteral>();
+        var stringLiteral = (StringLiteral)field;
+        stringLiteral.Value.Should().Be(expectedValue);
+        return stringLiteral;
+    }
+    private NumberLiteral ValidateNumberLiteral(Field field, decimal expectedValue)
+    {
+        field.Should().BeOfType<NumberLiteral>();
+        var numberLiteral = (NumberLiteral)field;
+        numberLiteral.Value.Should().Be(expectedValue);
+        return numberLiteral;
+    }
+    private BooleanLiteral ValidateBooleanLiteral(Field field, bool expectedValue)
+    {
+        field.Should().BeOfType<BooleanLiteral>();
+        var booleanLiteral = (BooleanLiteral)field;
+        booleanLiteral.Value.Should().Be(expectedValue);
+        return booleanLiteral;
     }
 
     private Token fromTokenType(TokenType type)

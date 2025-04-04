@@ -218,9 +218,11 @@ public class LexerTest
     }
 
     [Theory]
-    [InlineData("14", TokenType.Integer, 14)]
-    [InlineData("14.5", TokenType.Float, 14.5)]
-    public void TestNumbers(string input, TokenType expected, object value)
+    [InlineData("14", TokenType.Integer, 14, typeof(decimal))]
+    [InlineData("14.5", TokenType.Decimal, 14.5, typeof(decimal))]
+    [InlineData("true", TokenType.Boolean, true, typeof(bool))]
+    [InlineData("false", TokenType.Boolean, false, typeof(bool))]
+    public void TestLiterals(string input, TokenType expected, object value, Type expectedType)
     {
         // Given
         var source = $"* \n // Some comment \n {input} \n*";
@@ -233,6 +235,7 @@ public class LexerTest
         CheckTokens([TokenType.Star, expected, TokenType.Star, TokenType.EndOfFile], tokens);
         tokens[1].Line.Should().Be(3);
         tokens[1].Column.Should().Be(2);
+        tokens[1].Value.Should().BeOfType(expectedType);
         tokens[1].Value.Should().Be(value);
     }
 

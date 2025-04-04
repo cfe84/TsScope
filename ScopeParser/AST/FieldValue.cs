@@ -10,5 +10,8 @@ namespace ScopeParser.Ast;
 /// Can be one of:
 /// - InputField
 /// - TsExpression
+/// - StringLiteral
+/// - NumberLiteral
+/// - BooleanLiteral
 /// </summary>
 public interface FieldValue : Field {}

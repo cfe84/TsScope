@@ -13,7 +13,7 @@ namespace ScopeParser.Lexing
 
     Output, To,
 
-    String, Integer, Float,
+    String, Integer, Decimal, Boolean,
 
     LParen, RParen,
 

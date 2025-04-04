@@ -149,6 +149,8 @@ public class Lexer(string source)
         { "WHERE", TokenType.Where },
         { "AS", TokenType.As },
         { "TO", TokenType.To },
+        { "true", TokenType.Boolean },
+        { "false", TokenType.Boolean },
     };
 
     private Token? scanReservedKeyword(Dictionary<string, TokenType> reservedKeywords)
@@ -158,7 +160,10 @@ public class Lexer(string source)
         if (matching.Key != null)
         {
             next(identifier.Length);
-            return new Token(matching.Value, null, startingLine, startingColumn);
+            object? value = null;
+            if (matching.Value == TokenType.Boolean)
+                value = identifier == "true";
+            return new Token(matching.Value, value, startingLine, startingColumn);
         }
         return null;
     }
@@ -241,14 +246,14 @@ public class Lexer(string source)
         }
         if (peek() == '.')
         {
-            tokenType = TokenType.Float;
+            tokenType = TokenType.Decimal;
             number.Append(next());
             while (!isFinished() && char.IsDigit(peek()))
             {
                 number.Append(next());
             }
         }
-        return new Token(tokenType, tokenType == TokenType.Integer ? int.Parse(number.ToString()) : double.Parse(number.ToString()), startingLine, startingColumn);
+        return new Token(tokenType, decimal.Parse(number.ToString()), startingLine, startingColumn);
     }
 
     private Token scanIdentifier()

@@ -12,6 +12,7 @@ This compiler is using this syntax:
 
 <STATEMENT> ::=
 	  <COMMENT>
+	| <VARIABLE_DEFINITION>
 	| <ASSIGNMENT>
 	| <OUTPUT>
 
@@ -51,6 +52,11 @@ This compiler is using this syntax:
 <INPUT_FIELD> ::= <IDENTIFIER>
     | <IDENTIFIER> '.' <IDENTIFIER>
 	| <TS_EXPRESSION>
+	| <STRING_LITERAL>
+
+<VARIABLE_DEFINITION> ::= "#DECLARE" <VARIABLE_IDENTIFIER> "=" 
+
+<VARIABLE_IDENTIFIER> 
 
 <COMMENT> ::=
 	  <OC_COMMENT>

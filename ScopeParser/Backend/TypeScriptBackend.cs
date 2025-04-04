@@ -204,4 +204,21 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
             ("alias", alias)
         );
     }
+
+    public string VisitStringLiteral(StringLiteral node)
+    {
+        return snippetProvider.GetSnippet("stringLiteral",
+            ("value", node.Value)
+        );
+    }
+
+    public string VisitBooleanLiteral(BooleanLiteral node)
+    {
+        return node.Value ? "true" : "false";
+    }
+
+    public string VisitNumberLiteral(NumberLiteral node)
+    {
+        return node.Value.ToString();
+    }
 }

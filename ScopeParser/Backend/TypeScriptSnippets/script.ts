@@ -19,7 +19,7 @@ interface QualifiedName {
 
 interface Field {
   name: QualifiedName;
-  value: string;
+  value: any;
 }
 
 interface FieldsSpec {
@@ -317,6 +317,16 @@ class FileOutput implements IConsumer, IClosableOutput {
     this.close();
   }
 
+  private fieldToString(value: any): string {
+    if (typeof value === "string") {
+      return `"${value.replace(/"/g, '\\"')}"`;
+    }
+    if (value === null || value === undefined) {
+      return "";
+    }
+    return value.toString();
+  }
+
   receiveRecord(_: Source, record: SourceRecord): void {
     if (!this.wroteHeader) {
       this.writeHeader(
@@ -327,7 +337,7 @@ class FileOutput implements IConsumer, IClosableOutput {
 
     fs.appendFileSync(
       this.filePath,
-      record.map((field) => field.value).join(",") + "\n"
+      record.map((field) => this.fieldToString(field.value)).join(",") + "\n"
     );
   }
 
@@ -335,7 +345,8 @@ class FileOutput implements IConsumer, IClosableOutput {
     this.wroteHeader = true;
     fs.writeFileSync(
       this.filePath,
-      schema.map((field) => field.name).join(",") + "\n"
+      schema.map((field) => `"${field.name.replace(/"/g, '\\"')}`).join(",") +
+        "\n"
     );
   }
 

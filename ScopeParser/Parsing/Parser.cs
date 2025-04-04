@@ -277,6 +277,26 @@ namespace ScopeParser.Parsing
             {
                 fieldValue = parseTsExpression();
             }
+            else if (nextIs(TokenType.String))
+            {
+                var stringToken = expect(TokenType.String, "a string");
+                fieldValue = new StringLiteral(stringToken, stringToken.ValueAs<string>());
+            }
+            else if (nextIs(TokenType.Integer))
+            {
+                var numberToken = next();
+                fieldValue = new NumberLiteral(numberToken, numberToken.ValueAs<decimal>());
+            }
+            else if (nextIs(TokenType.Decimal))
+            {
+                var numberToken = next();
+                fieldValue = new NumberLiteral(numberToken, numberToken.ValueAs<decimal>());
+            }
+            else if (nextIs(TokenType.Boolean))
+            {
+                var numberToken = next();
+                fieldValue = new BooleanLiteral(numberToken, numberToken.ValueAs<bool>());
+            }
             else
             {
                 var identifier = expect(TokenType.Identifier, "field or source identifier");
