@@ -277,6 +277,10 @@ public class ParserTest
             new Token(TokenType.Identifier, "field_name_2", 1, 3),
             fromTokenType(TokenType.As),
             new Token(TokenType.Identifier, "field_name_2_alias", 1, 4),
+            fromTokenType(TokenType.Comma),
+            new Token(TokenType.TsExpression, "tsExpression", 1, 5),
+            fromTokenType(TokenType.As),
+            new Token(TokenType.Identifier, "field_name_3_alias", 1, 6),
             fromTokenType(TokenType.From),
             new Token(TokenType.Identifier, "input", 1, 5),
             fromTokenType(TokenType.SemiColon),
@@ -291,10 +295,12 @@ public class ParserTest
         validateScript(parser, script);
         var assignment = validateAssignment(script.Statements[0], "output");
         var select = validateSelectQuery(assignment.Source);
-        var fieldList = validateFieldList(select.Fields, 2);
+        var fieldList = validateFieldList(select.Fields, 3);
         validateInputField(fieldList.Fields[0], "input", "field_name");
         var aliasedField = validateAliasedField(fieldList.Fields[1], "field_name_2_alias");
         validateInputField(aliasedField.Field, null, "field_name_2");
+        var tsField = validateAliasedField(fieldList.Fields[2], "field_name_3_alias");
+        validateTsExpression(tsField.Field, "tsExpression");
         validateIdentifierSource(select.Source, "input");
     }
 
@@ -535,9 +541,10 @@ public class ParserTest
         return aliasedField;
     }
 
-    private TsExpression validateTsExpression(TsExpression expression, string expected)
+    private TsExpression validateTsExpression(Node node, string expected)
     {
-        expression.Should().BeOfType<TsExpression>();
+        node.Should().BeOfType<TsExpression>();
+        var expression = (TsExpression)node;
         expression.Expression.Should().Be(expected);
         return expression;
     }

@@ -1,8 +1,8 @@
 class RecordMapper___id__ extends RecordMapper {
-  map(input: SourceRecord): SourceRecord {
-    const output: SourceRecord = [
+  map(record: SourceRecord): SourceRecord {
+    Object.assign(globalThis, recordToObject(record));
+    return [
       /*%mapRecord%*/
     ];
-    return output;
   }
 }

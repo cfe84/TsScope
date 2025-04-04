@@ -1,1 +1,1 @@
-this.findField(input, __namespace__, "__name__")
+this.findField(record, __namespace__, "__name__")

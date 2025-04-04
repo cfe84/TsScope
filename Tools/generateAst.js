@@ -5,7 +5,7 @@ const path = require('path');
 function run() {
   const outputDirectory = getOutputDir();
   const terminalTypes = {
-    "AliasedField": ["Field field", "string alias"],
+    "AliasedField": ["FieldValue field", "string alias"],
     "AliasedSource": ["Source source", "Identifier alias"],
     "Assignment":  ["Identifier variableName", "Source source"],
     "InputField": ["string name", "string? ns"],
@@ -22,7 +22,8 @@ function run() {
   };
   const compositeTypes = {
     "AliasableSource": ["Source", "AliasedSource"],
-    "Field": ["InputField", "AliasedField"], // TODO: add a ts expression
+    "FieldValue": ["InputField", "TsExpression"],
+    "Field": ["AliasedField", "FieldValue"],
     "FieldSpec": ["FieldList", "Star"],
     "SelectSource": ["AliasableSource", "JoinQuery"],
     "Source": ["FileSource", "SelectQuery", "Identifier"],

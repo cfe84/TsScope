@@ -8,7 +8,7 @@ namespace ScopeParser.Ast;
 
 /// <summary>
 /// Can be one of:
-/// - AliasedField
-/// - FieldValue
+/// - InputField
+/// - TsExpression
 /// </summary>
-public interface Field : Node {}
+public interface FieldValue : Field {}

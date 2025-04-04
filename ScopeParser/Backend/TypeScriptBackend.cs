@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Microsoft.VisualBasic;
 using ScopeParser.Ast;
 using ScopeParser.Lexing;
+using ScopeParser.Parsing;
 
 public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<string>
 {
@@ -51,7 +52,7 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitFieldList(FieldList node)
     {
-        var fields = node.Fields.Select(VisitFieldForFieldSpec);
+        var fields = node.Fields.Select((field, index) => VisitFieldForFieldSpec(field, $"field_{index}"));
 
         // Fields are injected as a string list into the snippet.
         var mapRecord = string.Join(",\n", fields);
@@ -71,10 +72,10 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     /// </summary>
     /// <param name="node"></param>
     /// <returns></returns>
-    private string VisitFieldForFieldSpec(Field field)
+    private string VisitFieldForFieldSpec(Field field, string defaultName)
     {
         var ns = "undefined";
-        var name = string.Empty;
+        var name = defaultName;
 
         if (field is AliasedField aliasedField)
         {
@@ -118,6 +119,10 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitIdentifier(Identifier identifier)
     {
+        if (!variableCount.ContainsKey(identifier.Value))
+        {
+            throw new ParseError($"Identifier {identifier.Value} is not defined", identifier.Token);
+        }
         return identifier.Value + "_" + variableCount[identifier.Value];
     }
 

@@ -6,7 +6,7 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class InputField(Token token, string name, string? ns) : Field {
+public class InputField(Token token, string name, string? ns) : FieldValue {
       
     public T Visit<T>(INodeVisitor<T> visitor)
     {

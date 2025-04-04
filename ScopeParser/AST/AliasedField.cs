@@ -6,7 +6,7 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class AliasedField(Token token, Field field, string alias) : Field {
+public class AliasedField(Token token, FieldValue field, string alias) : Field {
       
     public T Visit<T>(INodeVisitor<T> visitor)
     {
@@ -15,7 +15,7 @@ public class AliasedField(Token token, Field field, string alias) : Field {
 
     public Token Token => token;
       
-    public Field Field => field;
+    public FieldValue Field => field;
 
     public string Alias => alias;
 }

@@ -272,27 +272,33 @@ namespace ScopeParser.Parsing
         private Field parseField()
         {
             var token = peek();
-            // TODO: support TS expression as field
-            var identifier = expect(TokenType.Identifier, "field or source identifier");
-            InputField res;
-            if (match(TokenType.Dot)) // There's a namespace
+            FieldValue fieldValue;
+            if (nextIs(TokenType.TsExpression))
             {
-                var field = expect(TokenType.Identifier, "field identifier");
-                if (field == null)
-                    throw new ParseError("Expected field after dot", next());
-                res = new InputField(token, field.ValueAs<string>(), identifier.ValueAs<string>());
+                fieldValue = parseTsExpression();
             }
             else
             {
-                res = new InputField(token, identifier.ValueAs<string>(), null);
+                var identifier = expect(TokenType.Identifier, "field or source identifier");
+                if (match(TokenType.Dot)) // There's a namespace
+                {
+                    var field = expect(TokenType.Identifier, "field identifier");
+                    if (field == null)
+                        throw new ParseError("Expected field after dot", next());
+                    fieldValue = new InputField(token, field.ValueAs<string>(), identifier.ValueAs<string>());
+                }
+                else
+                {
+                    fieldValue = new InputField(token, identifier.ValueAs<string>(), null);
+                }
             }
 
             if (match(TokenType.As))
             {
                 var alias = parseIdentifier(true)!;
-                return new AliasedField(token, res, alias.Value);
+                return new AliasedField(token, fieldValue, alias.Value);
             }
-            return res;
+            return fieldValue;
         }
 
         private TsExpression parseTsExpression()
@@ -329,10 +335,17 @@ namespace ScopeParser.Parsing
 
         private bool match(params TokenType[] types)
         {
+            var matched = nextIs(types);
+            if (matched)
+                next();
+            return matched;
+        }
+
+        private bool nextIs(params TokenType[] types)
+        {
             if (isAtEnd() ||
                 !types.Contains(tokens[current].TokenType))
                 return false;
-            next();
             return true;
         }
 
