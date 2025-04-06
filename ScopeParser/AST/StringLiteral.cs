@@ -6,7 +6,7 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class StringLiteral(Token token, string value) : FieldValue, VariableValue {
+public class StringLiteral(Token token, string value) : FieldValue, StringValue, VariableValue {
       
     public T Visit<T>(INodeVisitor<T> visitor)
     {

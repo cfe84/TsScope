@@ -9,6 +9,7 @@ namespace ScopeParser.Parsing
         public List<ParseError> Errors = new List<ParseError>();
         public bool HasErrors => Errors.Count > 0;
 
+        private Dictionary<string, string> variables = new Dictionary<string, string>();
         private int current = 0;
 
         /// <summary>
@@ -51,9 +52,6 @@ namespace ScopeParser.Parsing
             if ((statement = parseOutput()) != null) return statement;
             if ((statement = parseVariableAssignmentOrDefinition()) != null) return statement;
             if ((statement = parseParam()) != null) return statement;
-
-            // TODO: Support variable assignment
-            // TODO: Support parameter
             Errors.Add(new ParseError("Unexpected token", next()));
             synchronize();
             return null;
@@ -114,8 +112,11 @@ namespace ScopeParser.Parsing
         /// <exception cref="ParseError"></exception>
         private VariableDefinition parseVariableDefinition(VariableIdentifier variableIdentifier)
         {
+            if (variables.ContainsKey(variableIdentifier.VariableName))
+                throw new ParseError($"Variable '{variableIdentifier.VariableName}' is already defined", variableIdentifier.Token);
             // We already consumed the ":" in parseVariableAssignment
             var type = parseIdentifier(true)!;
+            variables[variableIdentifier.VariableName] = type.Value;
             expect(TokenType.Equal, "=");
             var value = parseVariableValue();
             return new VariableDefinition(variableIdentifier.Token, variableIdentifier.VariableName, type.Value, value);
@@ -143,9 +144,9 @@ namespace ScopeParser.Parsing
             {
                 return value;
             }
-            else if (nextIs(TokenType.TsExpression))
+            else if ((value = parseTsExpression(false)) != null)
             {
-                return parseTsExpression();
+                return value;
             }
 
             throw new ParseError("Expected variable value", next());
@@ -193,11 +194,22 @@ namespace ScopeParser.Parsing
                 var token = previous();
                 var source = parseSource();
                 expect(TokenType.To, "TO");
-                // TODO: Support variable name as well.
+
                 var outputFile = expect(TokenType.String, "filename");
                 return new Output(token, source, outputFile.ValueAs<string>());
             }
             return null;
+        }
+
+        private void validateVariable(string variableName, string? variableType)
+        {
+            if (!variables.ContainsKey(variableName))
+                throw new ParseError($"Variable '{variableName}' is not defined", previous());
+            if (variableType != null)
+            {
+                if (variables[variableName] != variableType)
+                    throw new ParseError($"Expected a variable of type '{variableType}'", previous());
+            }
         }
 
         public Identifier? parseIdentifier(bool throwOnFail = false)
@@ -241,11 +253,30 @@ namespace ScopeParser.Parsing
                 var token = previous();
                 var fieldSpec = parseFieldSpec();
                 expect(TokenType.From, "FROM");
-                // TODO: Support variable name as well.
-                var filename = expect(TokenType.String, "a string with filename");
-                return new FileSource(token, fieldSpec, filename.ValueAs<string>());
+                var filename = parseStringValue();
+                return new FileSource(token, fieldSpec, filename);
             }
             return null;
+        }
+
+        private StringValue parseStringValue()
+        {
+            StringValue? stringValue;
+            if ((stringValue = parseStringLiteral()) != null)
+            {
+                return stringValue;
+            }
+            else if ((stringValue = parseVariableIdentifier()) != null)
+            {
+                validateVariable(((VariableIdentifier)stringValue).VariableName, "string");
+                return stringValue;
+            }
+            else if ((stringValue = parseTsExpression(false)) != null)
+            {
+                return stringValue;
+            }
+
+            throw new ParseError("Expected string value", next());
         }
 
         /// <summary>
@@ -302,7 +333,7 @@ namespace ScopeParser.Parsing
                 expect(TokenType.Join, "JOIN");
                 var right = parseAliasableSource();
                 expect(TokenType.On, "ON");
-                var condition = parseTsExpression();
+                var condition = parseTsExpression(true)!;
                 left = new JoinQuery(joinTypeToken, left, right, joinType, condition);
             }
             return left;
@@ -331,7 +362,7 @@ namespace ScopeParser.Parsing
             if (match(TokenType.Where))
             {
                 var token = previous();
-                var expression = parseTsExpression();
+                var expression = parseTsExpression(true)!;
                 return new WhereStatement(token, expression);
             }
             return null;
@@ -386,9 +417,9 @@ namespace ScopeParser.Parsing
             var token = peek();
             FieldValue fieldValue;
             FieldValue? literalValue;
-            if (nextIs(TokenType.TsExpression))
+            if ((literalValue = parseTsExpression(false)) != null)
             {
-                fieldValue = parseTsExpression();
+                fieldValue = literalValue;
             }
             else if ((literalValue = parseLiteralFieldValue()) != null)
             {
@@ -463,10 +494,16 @@ namespace ScopeParser.Parsing
             return null;
         }
 
-        private TsExpression parseTsExpression()
+        private TsExpression? parseTsExpression(bool throwOnFail = true)
         {
-            var token = expect(TokenType.TsExpression, "a valid TS expression");
-            return new TsExpression(token, token.ValueAs<string>());
+            if (nextIs(TokenType.TsExpression))
+            {
+                var token = next();
+                return new TsExpression(token, token.ValueAs<string>());
+            }
+            if (throwOnFail)
+                throw new ParseError("Expected a valid TS expression", next());
+            return null;
         }
 
         private void synchronize()
@@ -477,8 +514,8 @@ namespace ScopeParser.Parsing
                 var token = peek();
                 switch (token.TokenType)
                 {
+                    case TokenType.SemiColon:
                     case TokenType.Extract:
-                    case TokenType.Identifier:
                     case TokenType.Output:
                         return;
                 }

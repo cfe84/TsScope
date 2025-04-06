@@ -22,7 +22,7 @@ This compiler is using this syntax:
 
 <SOURCE> = <FILE_SOURCE> | <SELECT_QUERY> | <IDENTIFIER>
 
-<FILE_SOURCE> = "EXTRACT" <FIELD_SPEC> 'FROM' <STRING> // Should be STRING_VALUE
+<FILE_SOURCE> = "EXTRACT" <FIELD_SPEC> 'FROM' <STRING_VALUE>
 
 <SELECT_QUERY> = "SELECT" <FIELD_SPEC> "FROM" <SELECT_SOURCE> [ <WHERE_STATEMENT> ]
 
@@ -36,7 +36,7 @@ This compiler is using this syntax:
 
 <JOIN_TYPE> = "INNER JOIN"
 
-<OUTPUT> = "OUTPUT" <STREAM> "TO" <STRING> // Same, should be STRING_VALUE
+<OUTPUT> = "OUTPUT" <STREAM> "TO" <STRING_VALUE>
 
 <FIELD_SPEC> = "*"
 	| <FIELD_LIST> // Todo: support *, somefield AS something, { somefield / 2 } AS somethingElse

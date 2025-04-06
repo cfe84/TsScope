@@ -6,7 +6,7 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class VariableIdentifier(Token token, string variableName) : VariableValue {
+public class VariableIdentifier(Token token, string variableName) : StringValue, VariableValue {
       
     public T Visit<T>(INodeVisitor<T> visitor)
     {

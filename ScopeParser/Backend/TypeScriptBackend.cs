@@ -111,9 +111,10 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     public string VisitFileSource(FileSource node)
     {
         var fieldSpec = Visit(node.FieldSpec);
+        var filename = Visit(node.FileName);
         return snippetProvider.GetSnippet("fileSource",
             ("fieldSpec", fieldSpec),
-            ("filename", node.FileName)
+            ("filename", filename)
         );
     }
 

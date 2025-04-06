@@ -106,8 +106,92 @@ public class ParserTest
         // then
         validateScript(parser, script);
         var assignment = validateAssignment(script.Statements[0], "source_name");
-        FileSource fileSource = validateFileSource(assignment, "file.csv");
+        FileSource fileSource = validateFileSource(assignment);
+        ValidateStringLiteral(fileSource.FileName, "file.csv");
         validateStar(fileSource.FieldSpec);
+    }
+
+    [Fact]
+    public void TestAssignmentFromExtractWithVariableName()
+    {
+        // Given
+        var source =
+            defineVariable("file", "string", "file.csv").Concat(
+            new List<Token> {
+                new Token(TokenType.Identifier, "source_name", 1, 1),
+                fromTokenType(TokenType.Equal),
+                fromTokenType(TokenType.Extract),
+                fromTokenType(TokenType.Star),
+                fromTokenType(TokenType.From),
+                fromTokenType(TokenType.At),
+                new Token(TokenType.Identifier, "file", 1, 10),
+                fromTokenType(TokenType.SemiColon),
+                fromTokenType(TokenType.EndOfFile),
+            }).ToList();
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script, 2);
+        var assignment = validateAssignment(script.Statements[1], "source_name");
+        FileSource fileSource = validateFileSource(assignment);
+        validateVariableIdentifier(fileSource.FileName, "file");
+        validateStar(fileSource.FieldSpec);
+    }
+
+    [Fact]
+    public void TestAssignmentFromExtractWithTsExpression()
+    {
+        // Given
+        var source = new List<Token> {
+            new Token(TokenType.Identifier, "source_name", 1, 1),
+            fromTokenType(TokenType.Equal),
+            fromTokenType(TokenType.Extract),
+            fromTokenType(TokenType.Star),
+            fromTokenType(TokenType.From),
+            new Token(TokenType.TsExpression, "SomeExpression", 1, 10),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script, 1);
+        var assignment = validateAssignment(script.Statements[0], "source_name");
+        FileSource fileSource = validateFileSource(assignment);
+        validateTsExpression(fileSource.FileName, "SomeExpression");
+        validateStar(fileSource.FieldSpec);
+    }
+
+    [Fact]
+    public void TestAssignmentFromExtractWithIncorrectVariableType()
+    {
+        // Given
+        var source =
+            defineVariable("file", "number", "1.1").Concat(
+            new List<Token> {
+                new Token(TokenType.Identifier, "source_name", 1, 1),
+                fromTokenType(TokenType.Equal),
+                fromTokenType(TokenType.Extract),
+                fromTokenType(TokenType.Star),
+                fromTokenType(TokenType.From),
+                fromTokenType(TokenType.At),
+                new Token(TokenType.Identifier, "file", 1, 10),
+                fromTokenType(TokenType.SemiColon),
+                fromTokenType(TokenType.EndOfFile),
+            }).ToList();
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateError(parser, "Expected a variable of type 'string'", TokenType.Identifier);
     }
 
     [Fact]
@@ -155,6 +239,29 @@ public class ParserTest
         validateScript(parser, script);
         var variableAssignment = ValidateVariableDefinition(script.Statements[0], "variable_name", "type");
         ValidateStringLiteral(variableAssignment.Value, "value");
+    }
+
+    [Fact]
+    public void TestVariableRedefinition()
+    {
+        // Given
+        var source = new List<Token> {
+            fromTokenType(TokenType.At),
+            new Token(TokenType.Identifier, "variable_name", 1, 1),
+            fromTokenType(TokenType.Colon),
+            new Token(TokenType.Identifier, "type", 1, 1),
+            fromTokenType(TokenType.Equal),
+            new Token(TokenType.String, "value", 1, 1),
+            fromTokenType(TokenType.SemiColon),
+        };
+        source = source.Concat(source).Concat(new List<Token> { fromTokenType(TokenType.EndOfFile) }).ToList();
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateError(parser, "Variable 'variable_name' is already defined", TokenType.At);
     }
 
     [Fact]
@@ -616,12 +723,11 @@ public class ParserTest
         return output;
     }
 
-    private static FileSource validateFileSource(Assignment assignment, string expectedFileName)
+    private static FileSource validateFileSource(Assignment assignment)
     {
         assignment.Source.Should().NotBeNull();
         assignment.Source.Should().BeOfType<FileSource>();
         var fileSource = (FileSource)assignment.Source;
-        fileSource.FileName.Should().BeEquivalentTo(expectedFileName);
         return fileSource;
     }
 
@@ -788,5 +894,18 @@ public class ParserTest
     private Token fromTokenType(TokenType type)
     {
         return new Token(type, null, 1, 1);
+    }
+
+    private List<Token> defineVariable(string name, string type, string value)
+    {
+        return new List<Token> {
+            fromTokenType(TokenType.At),
+            new Token(TokenType.Identifier, name, 1, 1),
+            fromTokenType(TokenType.Colon),
+            new Token(TokenType.Identifier, type, 1, 1),
+            fromTokenType(TokenType.Equal),
+            new Token(TokenType.String, value, 1, 1),
+            fromTokenType(TokenType.SemiColon),
+        };
     }
 }

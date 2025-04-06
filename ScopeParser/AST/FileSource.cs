@@ -6,7 +6,7 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class FileSource(Token token, FieldSpec fieldSpec, string fileName) : Source {
+public class FileSource(Token token, FieldSpec fieldSpec, StringValue fileName) : Source {
       
     public T Visit<T>(INodeVisitor<T> visitor)
     {
@@ -17,6 +17,6 @@ public class FileSource(Token token, FieldSpec fieldSpec, string fileName) : Sou
       
     public FieldSpec FieldSpec => fieldSpec;
 
-    public string FileName => fileName;
+    public StringValue FileName => fileName;
 }
       

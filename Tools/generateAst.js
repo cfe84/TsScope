@@ -11,7 +11,7 @@ function run() {
     "BooleanLiteral": ["bool value"],
     "InputField": ["string name", "string? ns"],
     "FieldList": ["Field[] fields"],
-    "FileSource": ["FieldSpec fieldSpec", "string fileName"],
+    "FileSource": ["FieldSpec fieldSpec", "StringValue fileName"],
     "Identifier": ["string value"],
     "JoinQuery": ["SelectSource left", "AliasableSource right", "JoinType joinType", "TsExpression condition"],
     "NumberLiteral": ["decimal value"], // since we output TS we only need number
@@ -35,6 +35,7 @@ function run() {
     "SelectSource": ["AliasableSource", "JoinQuery"],
     "Source": ["FileSource", "SelectQuery", "Identifier"],
     "Statement": ["Assignment", "VariableDefinition", "VariableAssignment", "Param", "Output"],
+    "StringValue": ["StringLiteral", "VariableIdentifier", "TsExpression"],
     "VariableValue": ["TsExpression", "StringLiteral", "NumberLiteral", "BooleanLiteral", "VariableIdentifier"],
   };
   const types = {};
