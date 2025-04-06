@@ -131,10 +131,11 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     {
         var variableName = getOutputName(outputCount++);
         var source = Visit(node.Source);
+        var fileName = Visit(node.OutputFile);
         return snippetProvider.GetSnippet("output",
             ("variableName", variableName),
             ("source", source),
-            ("fileName", node.OutputFile)
+            ("fileName", fileName)
         );
     }
 

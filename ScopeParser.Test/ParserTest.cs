@@ -191,7 +191,7 @@ public class ParserTest
         var script = parser.parse();
 
         // then
-        validateError(parser, "Expected a variable of type 'string'", TokenType.Identifier);
+        validateError(parser, "Expected a variable of type 'string'", TokenType.At);
     }
 
     [Fact]
@@ -429,8 +429,57 @@ public class ParserTest
 
         // then
         validateScript(parser, script);
-        var output = validateOutput(script);
+        var output = validateOutput(script.Statements[0]);
+        ValidateStringLiteral(output.OutputFile, "filename");
         validateIdentifierSource(output.Source, "source_name");
+    }
+
+    [Fact]
+    public void TestOutputFromSourceNameToVariable()
+    {
+        // Given
+        var source = defineVariable("file", "string", "file.csv").Concat(
+            new List<Token> {
+                fromTokenType(TokenType.Output),
+                new Token(TokenType.Identifier, "source_name", 1, 1),
+                fromTokenType(TokenType.To),
+                fromTokenType(TokenType.At),
+                new Token(TokenType.Identifier, "file", 1, 1),
+                fromTokenType(TokenType.SemiColon),
+                fromTokenType(TokenType.EndOfFile),
+            }).ToList();
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script, 2);
+        var output = validateOutput(script.Statements[1]);
+        validateIdentifierSource(output.Source, "source_name");
+        var variable = validateVariableIdentifier(output.OutputFile, "file");
+    }
+
+    [Fact]
+    public void TestOutputFromSourceNameToVariableNotFound()
+    {
+        // Given
+        var source = new List<Token> {
+            fromTokenType(TokenType.Output),
+            new Token(TokenType.Identifier, "source_name", 1, 1),
+            fromTokenType(TokenType.To),
+            fromTokenType(TokenType.At),
+            new Token(TokenType.Identifier, "file", 1, 1),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateError(parser, "Variable 'file' is not defined", TokenType.At);
     }
 
     [Fact]
@@ -715,11 +764,10 @@ public class ParserTest
         return assignment;
     }
 
-    private static Output validateOutput(Script script)
+    private static Output validateOutput(Statement statement)
     {
-        script.Statements[0].Should().BeOfType<Output>();
-        var output = (Output)script.Statements[0];
-        output.OutputFile.Should().Be("filename");
+        statement.Should().BeOfType<Output>();
+        var output = (Output)statement;
         return output;
     }
 

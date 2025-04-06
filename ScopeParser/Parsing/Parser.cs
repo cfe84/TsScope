@@ -195,20 +195,20 @@ namespace ScopeParser.Parsing
                 var source = parseSource();
                 expect(TokenType.To, "TO");
 
-                var outputFile = expect(TokenType.String, "filename");
-                return new Output(token, source, outputFile.ValueAs<string>());
+                var outputFile = parseStringValue();
+                return new Output(token, source, outputFile);
             }
             return null;
         }
 
-        private void validateVariable(string variableName, string? variableType)
+        private void validateVariable(VariableIdentifier variableIdentifier, string? variableType)
         {
-            if (!variables.ContainsKey(variableName))
-                throw new ParseError($"Variable '{variableName}' is not defined", previous());
+            if (!variables.ContainsKey(variableIdentifier.VariableName))
+                throw new ParseError($"Variable '{variableIdentifier.VariableName}' is not defined", variableIdentifier.Token);
             if (variableType != null)
             {
-                if (variables[variableName] != variableType)
-                    throw new ParseError($"Expected a variable of type '{variableType}'", previous());
+                if (variables[variableIdentifier.VariableName] != variableType)
+                    throw new ParseError($"Expected a variable of type '{variableType}'", variableIdentifier.Token);
             }
         }
 
@@ -268,7 +268,7 @@ namespace ScopeParser.Parsing
             }
             else if ((stringValue = parseVariableIdentifier()) != null)
             {
-                validateVariable(((VariableIdentifier)stringValue).VariableName, "string");
+                validateVariable((VariableIdentifier)stringValue, "string");
                 return stringValue;
             }
             else if ((stringValue = parseTsExpression(false)) != null)

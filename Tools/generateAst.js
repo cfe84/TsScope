@@ -15,7 +15,7 @@ function run() {
     "Identifier": ["string value"],
     "JoinQuery": ["SelectSource left", "AliasableSource right", "JoinType joinType", "TsExpression condition"],
     "NumberLiteral": ["decimal value"], // since we output TS we only need number
-    "Output": ["Source source", "string outputFile"],
+    "Output": ["Source source", "StringValue outputFile"],
     "Param": ["string name", "string type", "VariableValue? defaultValue"],
     "SelectQuery": ["FieldSpec fields", "SelectSource source", "WhereStatement? where"],
     "Script": ["Statement[] statements"],

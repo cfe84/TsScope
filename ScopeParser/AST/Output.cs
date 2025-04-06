@@ -6,7 +6,7 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class Output(Token token, Source source, string outputFile) : Statement {
+public class Output(Token token, Source source, StringValue outputFile) : Statement {
       
     public T Visit<T>(INodeVisitor<T> visitor)
     {
@@ -17,6 +17,6 @@ public class Output(Token token, Source source, string outputFile) : Statement {
       
     public Source Source => source;
 
-    public string OutputFile => outputFile;
+    public StringValue OutputFile => outputFile;
 }
       
