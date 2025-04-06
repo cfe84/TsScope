@@ -299,8 +299,6 @@ public class ParserTest
             fromTokenType(TokenType.Param),
             fromTokenType(TokenType.At),
             new Token(TokenType.Identifier, "variable_name", 1, 1),
-            fromTokenType(TokenType.Colon),
-            new Token(TokenType.Identifier, "type", 1, 1),
             fromTokenType(TokenType.SemiColon),
             fromTokenType(TokenType.EndOfFile),
         };
@@ -311,7 +309,7 @@ public class ParserTest
 
         // then
         validateScript(parser, script);
-        var variableAssignment = validateParam(script.Statements[0], "variable_name", "type", false);
+        validateParam(script.Statements[0], "variable_name", false);
     }
 
     [Fact]
@@ -322,10 +320,8 @@ public class ParserTest
             fromTokenType(TokenType.Param),
             fromTokenType(TokenType.At),
             new Token(TokenType.Identifier, "variable_name", 1, 1),
-            fromTokenType(TokenType.Colon),
-            new Token(TokenType.Identifier, "type", 1, 1),
             fromTokenType(TokenType.Equal),
-            new Token(TokenType.Decimal, 1.1m, 1, 1),
+            new Token(TokenType.String, "1.1m", 1, 1),
             fromTokenType(TokenType.SemiColon),
             fromTokenType(TokenType.EndOfFile),
         };
@@ -336,31 +332,8 @@ public class ParserTest
 
         // then
         validateScript(parser, script);
-        var variableAssignment = validateParam(script.Statements[0], "variable_name", "type", true);
-        ValidateNumberLiteral(variableAssignment.DefaultValue!, 1.1m);
-    }
-
-
-    [Fact]
-    public void TestParamDefinitionWithoutType()
-    {
-        // Given
-        var source = new List<Token> {
-            fromTokenType(TokenType.Param),
-            fromTokenType(TokenType.At),
-            new Token(TokenType.Identifier, "variable_name", 1, 1),
-            fromTokenType(TokenType.Equal),
-            new Token(TokenType.Decimal, 1.1m, 1, 1),
-            fromTokenType(TokenType.SemiColon),
-            fromTokenType(TokenType.EndOfFile),
-        };
-
-        // when
-        var parser = new Parser(source);
-        var script = parser.parse();
-
-        // then
-        validateError(parser, "Expected ':'", TokenType.Equal);
+        var variableAssignment = validateParam(script.Statements[0], "variable_name", true);
+        ValidateStringLiteral(variableAssignment.DefaultValue!, "1.1m");
     }
 
     [Fact]
@@ -924,12 +897,11 @@ public class ParserTest
         return variableIdentifier;
     }
 
-    private Param validateParam(Statement statement, string expectedName, string expectedType, bool expectDefaultValue)
+    private Param validateParam(Statement statement, string expectedName, bool expectDefaultValue)
     {
         statement.Should().BeOfType<Param>();
         var param = (Param)statement;
         param.Name.Should().Be(expectedName);
-        param.Type.Should().Be(expectedType);
         if (expectDefaultValue)
         {
             param.DefaultValue.Should().NotBeNull();

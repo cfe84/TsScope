@@ -170,18 +170,33 @@ namespace ScopeParser.Parsing
                 var identifier = parseVariableIdentifier();
                 if (identifier == null)
                     throw new ParseError("Expected identifier", next());
-                expect(TokenType.Colon, ":");
-                var type = parseIdentifier(true)!;
-                VariableValue? variableValue = null;
+                variables.Add(identifier.VariableName, "string");
+                ParamDefaultValue? variableValue = null;
                 if (match(TokenType.Equal))
                 {
                     // Has default value
-                    variableValue = parseVariableValue();
+                    variableValue = parseParamDefaultValue();
                 }
-                return new Param(token, identifier.VariableName, type.Value, variableValue);
+                return new Param(token, identifier.VariableName, variableValue);
             }
             return null;
         }
+
+        private ParamDefaultValue parseParamDefaultValue()
+        {
+            ParamDefaultValue? value;
+            if ((value = parseStringLiteral()) != null)
+            {
+                return value!;
+            }
+            else if ((value = parseTsExpression(false)) != null)
+            {
+                return value;
+            }
+
+            throw new ParseError("Expected default value", next());
+        }
+
 
         /// <summary>
         /// <OUTPUT> = "OUTPUT" <STREAM> "TO" <STRING> // Same, should be STRING_VALUE

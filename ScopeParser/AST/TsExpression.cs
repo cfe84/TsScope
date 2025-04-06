@@ -6,7 +6,7 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class TsExpression(Token token, string expression) : FieldValue, StringValue, VariableValue {
+public class TsExpression(Token token, string expression) : FieldValue, ParamDefaultValue, StringValue, VariableValue {
       
     public T Visit<T>(INodeVisitor<T> visitor)
     {

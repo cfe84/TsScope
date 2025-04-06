@@ -6,7 +6,7 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class Param(Token token, string name, string type, VariableValue? defaultValue) : Statement {
+public class Param(Token token, string name, ParamDefaultValue? defaultValue) : Statement {
       
     public T Visit<T>(INodeVisitor<T> visitor)
     {
@@ -17,8 +17,6 @@ public class Param(Token token, string name, string type, VariableValue? default
       
     public string Name => name;
 
-    public string Type => type;
-
-    public VariableValue? DefaultValue => defaultValue;
+    public ParamDefaultValue? DefaultValue => defaultValue;
 }
       

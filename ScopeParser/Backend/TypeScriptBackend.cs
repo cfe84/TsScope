@@ -1,5 +1,6 @@
 namespace ScopeParser.Backend;
 
+using System.ComponentModel;
 using System.Text.RegularExpressions;
 using Microsoft.VisualBasic;
 using ScopeParser.Ast;
@@ -10,6 +11,9 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 {
     public string Visit(Node node) => node.Visit(this);
     private Dictionary<string, int> variableCount = new();
+    private List<string> parameterInvokes = new();
+    private List<string> parameterLoadValues = new();
+    private List<string> parameterSignatures = new();
     private List<string> conditions = new();
     private List<string> recordMappers = new();
     private int outputCount = 0;
@@ -22,6 +26,9 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         var recordMappersStr = string.Join("\n", recordMappers);
         // The main script snippet contains all the boiler plate. Statements are just inserted in its midst
         return snippetProvider.GetSnippet("script",
+            ("paramSignatures", string.Join(",\n", parameterSignatures)),
+            ("paramInvokes", string.Join(",\n", parameterInvokes)),
+            ("loadParameters", string.Join("\n", parameterLoadValues)),
             ("statements", string.Join("\n", statements)),
             ("conditions", conditionsStr),
             ("recordMappers", recordMappersStr)
@@ -248,6 +255,14 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitParam(Param node)
     {
-        throw new NotImplementedException();
+        parameterSignatures.Add(snippetProvider.GetSnippet("paramSignature",
+            ("paramName", node.Name)
+        ));
+        parameterLoadValues.Add(snippetProvider.GetSnippet("paramLoadValue",
+            ("paramName", node.Name),
+            ("default", node.DefaultValue != null ? Visit(node.DefaultValue) : "undefined")
+        ));
+        parameterInvokes.Add(node.Name);
+        return "";
     }
 }

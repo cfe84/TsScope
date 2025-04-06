@@ -6,7 +6,8 @@ import * as path from "path";
  * "Custom" code is inserted lower down.
  */
 
-function run(/*%paramSignatures%*/) {
+function run(input: string,
+output: string) {
   ///////////////////////////////////////////////
   //                                           //
   //             Start boilerplate             //
@@ -369,9 +370,14 @@ function run(/*%paramSignatures%*/) {
   // This is where your script code starts.
 
   /*%params%*/
-  /*%recordMappers%*/
-  /*%conditions%*/
-  /*%statements%*/
+  
+  
+  
+
+const SOURCE__input_0 = new NamedSource(new FileSource(input, new StarRecordMapper()), "input");
+const OUTPUT_FILE__0 = new FileOutput(output);
+SOURCE__input_0.registerConsumer(OUTPUT_FILE__0);
+
 
   ///////////////////////////////////////////////
   //                                           //
@@ -396,6 +402,8 @@ function loadParameter(paramName: string, defaultValue?: string): string {
   return value;
 }
 
-/*%loadParameters%*/
+const input = loadParameter("input", undefined);
+const output = loadParameter("output", "outputs/params.csv");
 
-run(/*%paramInvokes%*/);
+run(input,
+output);

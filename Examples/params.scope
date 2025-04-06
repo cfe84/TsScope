@@ -1,0 +1,5 @@
+PARAM @input;
+PARAM @output = "outputs/params.csv";
+
+input = EXTRACT * FROM @input;
+OUTPUT input TO @output;
