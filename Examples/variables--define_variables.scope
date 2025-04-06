@@ -1,0 +1,7 @@
+@input: string = "inputs/users.csv";
+@output: string = "outputs/variables--define_variables.csv";
+
+input = SELECT firstName AS name FROM EXTRACT * FROM @input;
+OUTPUT input TO @output;
+@output = "outputs/variables--define_variables-2.csv";
+OUTPUT input TO @output;

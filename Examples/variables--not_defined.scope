@@ -1,0 +1,3 @@
+@input: string = "inputs/users.csv";
+input = SELECT firstName AS name FROM EXTRACT * FROM @input;
+OUTPUT input TO @output;

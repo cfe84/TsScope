@@ -268,6 +268,7 @@ public class ParserTest
     public void TestVariableAssignment()
     {
         // Given
+        // TODO: check for variable is not defined
         var source = new List<Token> {
             fromTokenType(TokenType.At),
             new Token(TokenType.Identifier, "variable_name", 1, 1),
@@ -288,6 +289,7 @@ public class ParserTest
         var variableAssignment = validateVariableAssignment(script.Statements[0], "variable_name");
         validateVariableIdentifier(variableAssignment.Value, "variable_name_2");
     }
+
 
     [Fact]
     public void TestParamDefinitionWithoutDefaultValue()

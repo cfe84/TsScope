@@ -124,7 +124,7 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         {
             throw new ParseError($"Identifier {identifier.Value} is not defined", identifier.Token);
         }
-        return identifier.Value + "_" + variableCount[identifier.Value];
+        return "SOURCE__" + identifier.Value + "_" + variableCount[identifier.Value];
     }
 
     public string VisitOutput(Output node)
@@ -158,7 +158,7 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     private string getOutputName(int count)
     {
-        return "output_" + count;
+        return "OUTPUT_FILE__" + count;
     }
 
     public string VisitWhereStatement(WhereStatement node)
@@ -226,17 +226,24 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitVariableAssignment(VariableAssignment node)
     {
-        throw new NotImplementedException();
+        return snippetProvider.GetSnippet("variableAssignment",
+            ("variableName", node.VariableName),
+            ("value", Visit(node.Value))
+        );
     }
 
     public string VisitVariableDefinition(VariableDefinition node)
     {
-        throw new NotImplementedException();
+        return snippetProvider.GetSnippet("variableDefinition",
+            ("variableName", node.VariableName),
+            ("variableType", node.Type),
+            ("value", Visit(node.Value))
+        );
     }
 
     public string VisitVariableIdentifier(VariableIdentifier node)
     {
-        throw new NotImplementedException();
+        return node.VariableName;
     }
 
     public string VisitParam(Param node)

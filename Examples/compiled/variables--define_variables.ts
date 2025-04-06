@@ -345,7 +345,7 @@ class FileOutput implements IConsumer, IClosableOutput {
     this.wroteHeader = true;
     fs.writeFileSync(
       this.filePath,
-      schema.map((field) => `"${field.name.replace(/"/g, '\\"')}`).join(",") +
+      schema.map((field) => `"${field.name.replace(/"/g, '\\"')}"`).join(",") +
         "\n"
     );
   }
@@ -371,116 +371,26 @@ class RecordMapper_0 extends RecordMapper {
       {
     name: {
         namespace: undefined,
-        name: "id",
-    },
-    value: this.findField(record, undefined, "id"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "firstName",
+        name: "name",
     },
     value: this.findField(record, undefined, "firstName"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "age",
-    },
-    value: this.findField(record, undefined, "age"),
-}
-    ];
-  }
-}
-class RecordMapper_1 extends RecordMapper {
-  map(record: SourceRecord): SourceRecord {
-    Object.assign(globalThis, recordToObject(record));
-    return [
-      {
-    name: {
-        namespace: undefined,
-        name: "id",
-    },
-    value: this.findField(record, undefined, "id"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "firstName",
-    },
-    value: this.findField(record, undefined, "firstName"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "roleId",
-    },
-    value: this.findField(record, undefined, "roleId"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "age",
-    },
-    value: this.findField(record, undefined, "age"),
-}
-    ];
-  }
-}
-class RecordMapper_2 extends RecordMapper {
-  map(record: SourceRecord): SourceRecord {
-    Object.assign(globalThis, recordToObject(record));
-    return [
-      {
-    name: {
-        namespace: undefined,
-        name: "id",
-    },
-    value: `ID-${id}`,
-},
-{
-    name: {
-        namespace: undefined,
-        name: "field_1",
-    },
-    value: firstName.toUpperCase(),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "field_2",
-    },
-    value: "Yop",
-},
-{
-    name: {
-        namespace: undefined,
-        name: "thisOneIsAliased",
-    },
-    value: "Yop",
-},
-{
-    name: {
-        namespace: undefined,
-        name: "number",
-    },
-    value: 54,
-},
-{
-    name: {
-        namespace: undefined,
-        name: "aBool",
-    },
-    value: true,
 }
     ];
   }
 }
 
-const fields_0 = new NamedSource(new SelectQuerySource(new FileSource("inputs/users.csv", new RecordMapper_1()), new RecordMapper_0(), undefined), "fields");
-const mapped_0 = new NamedSource(new SelectQuerySource(new NamedSource(fields_0, "capitalizedName"), new RecordMapper_2(), undefined), "mapped");
-const output_0 = new FileOutput("outputs/select--ts-expression.csv");
-mapped_0.registerConsumer(output_0);
+let input: string = "inputs/users.csv";
+
+let output: string = "outputs/variables--define_variables.csv";
+
+const SOURCE__input_0 = new NamedSource(new SelectQuerySource(new FileSource(input, new StarRecordMapper()), new RecordMapper_0(), undefined), "input");
+const OUTPUT_FILE__0 = new FileOutput(output);
+SOURCE__input_0.registerConsumer(OUTPUT_FILE__0);
+
+output = "outputs/variables--define_variables-2.csv";
+
+const OUTPUT_FILE__1 = new FileOutput(output);
+SOURCE__input_0.registerConsumer(OUTPUT_FILE__1);
 
 
 ///////////////////////////////////////////////

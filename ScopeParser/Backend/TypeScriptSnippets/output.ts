@@ -1,2 +1,2 @@
-const __variableName__ = new FileOutput("/*%fileName%*/");
+const __variableName__ = new FileOutput(__fileName__);
 __source__.registerConsumer(__variableName__);

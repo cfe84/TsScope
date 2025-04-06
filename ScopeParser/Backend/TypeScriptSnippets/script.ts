@@ -345,7 +345,7 @@ class FileOutput implements IConsumer, IClosableOutput {
     this.wroteHeader = true;
     fs.writeFileSync(
       this.filePath,
-      schema.map((field) => `"${field.name.replace(/"/g, '\\"')}`).join(",") +
+      schema.map((field) => `"${field.name.replace(/"/g, '\\"')}"`).join(",") +
         "\n"
     );
   }
