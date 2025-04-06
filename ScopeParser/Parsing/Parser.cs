@@ -26,7 +26,7 @@ namespace ScopeParser.Parsing
                     if (statement != null)
                     {
                         statements.Add(statement);
-                        // expect(TokenType.SemiColon, ";");
+                        expect(TokenType.SemiColon, ";");
                     }
                 }
                 catch (ParseError e)
@@ -72,7 +72,6 @@ namespace ScopeParser.Parsing
                 return null;
             expect(TokenType.Equal, "=");
             var source = parseSource();
-            expect(TokenType.SemiColon, ";");
             return new Assignment(token, identifier, source);
         }
 
@@ -105,7 +104,6 @@ namespace ScopeParser.Parsing
         {
             expect(TokenType.Equal, "=");
             var value = parseVariableValue();
-            expect(TokenType.SemiColon, ";");
             return new VariableAssignment(variableIdentifier.Token, variableIdentifier.VariableName, value);
         }
 
@@ -120,7 +118,6 @@ namespace ScopeParser.Parsing
             var type = parseIdentifier(true)!;
             expect(TokenType.Equal, "=");
             var value = parseVariableValue();
-            expect(TokenType.SemiColon, ";");
             return new VariableDefinition(variableIdentifier.Token, variableIdentifier.VariableName, type.Value, value);
         }
 
@@ -180,7 +177,6 @@ namespace ScopeParser.Parsing
                     // Has default value
                     variableValue = parseVariableValue();
                 }
-                expect(TokenType.SemiColon, ";");
                 return new Param(token, identifier.VariableName, type.Value, variableValue);
             }
             return null;
@@ -199,7 +195,6 @@ namespace ScopeParser.Parsing
                 expect(TokenType.To, "TO");
                 // TODO: Support variable name as well.
                 var outputFile = expect(TokenType.String, "filename");
-                expect(TokenType.SemiColon, ";");
                 return new Output(token, source, outputFile.ValueAs<string>());
             }
             return null;
