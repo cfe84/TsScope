@@ -132,6 +132,7 @@ public class LexerTest
     [InlineData("AS", TokenType.As)]
     [InlineData("ON", TokenType.On)]
     [InlineData("TO", TokenType.To)]
+    [InlineData("PARAM", TokenType.Param)]
     public void TestDirectiveAndKeywords(string input, TokenType expected)
     {
         // Given
@@ -239,6 +240,8 @@ public class LexerTest
         tokens[1].Value.Should().Be(value);
     }
 
+
+
     [Theory]
     [InlineData("%")]
     [InlineData("{")]
@@ -309,18 +312,22 @@ public class LexerTest
         action.Should().Throw<LexError>().WithMessage("Unterminated typescript expression");
     }
 
-    [Fact]
-    public void TestParsesDot()
+    [Theory]
+    [InlineData(".", TokenType.Dot)]
+    [InlineData(":", TokenType.Colon)]
+    [InlineData(";", TokenType.SemiColon)]
+    [InlineData("@", TokenType.At)]
+    public void TestLexesSpecialCharacters(string input, TokenType expected)
     {
         // Given
-        var source = "a.b";
+        var source = $"a{input}b";
         var lexer = new Lexer(source);
 
         // When
         var tokens = lexer.Scan().ToList();
 
         // Then
-        CheckTokens([TokenType.Identifier, TokenType.Dot, TokenType.Identifier, TokenType.EndOfFile], tokens);
+        CheckTokens([TokenType.Identifier, expected, TokenType.Identifier, TokenType.EndOfFile], tokens);
         tokens[0].ValueAs<string>().Should().Be("a");
         tokens[2].ValueAs<string>().Should().Be("b");
     }

@@ -8,10 +8,10 @@ namespace ScopeParser.Ast;
 
 /// <summary>
 /// Can be one of:
-/// - Assignment
-/// - VariableDefinition
-/// - VariableAssignment
-/// - Param
-/// - Output
+/// - TsExpression
+/// - StringLiteral
+/// - NumberLiteral
+/// - BooleanLiteral
+/// - VariableIdentifier
 /// </summary>
-public interface Statement : Node {}
+public interface VariableValue : Node {}

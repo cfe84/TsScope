@@ -6,7 +6,8 @@ namespace ScopeParser.Lexing
     If, Else, End,
     Error, Warn,
 
-    Identifier, VariableName,
+    Identifier, Param,
+
     Equal,
 
     Select, Extract, From, Where, As, On, Inner, Left, Right, Outer, Join,
@@ -17,7 +18,7 @@ namespace ScopeParser.Lexing
 
     LParen, RParen,
 
-    Star, Comma, SemiColon, Dot,
+    Star, Comma, SemiColon, Dot, Colon, At,
 
     TsExpression,
 

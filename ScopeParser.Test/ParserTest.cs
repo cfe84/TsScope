@@ -133,6 +133,128 @@ public class ParserTest
     }
 
     [Fact]
+    public void TestVariableDefinition()
+    {
+        // Given
+        var source = new List<Token> {
+            fromTokenType(TokenType.At),
+            new Token(TokenType.Identifier, "variable_name", 1, 1),
+            fromTokenType(TokenType.Colon),
+            new Token(TokenType.Identifier, "type", 1, 1),
+            fromTokenType(TokenType.Equal),
+            new Token(TokenType.String, "value", 1, 1),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script);
+        var variableAssignment = ValidateVariableDefinition(script.Statements[0], "variable_name", "type");
+        ValidateStringLiteral(variableAssignment.Value, "value");
+    }
+
+    [Fact]
+    public void TestVariableAssignment()
+    {
+        // Given
+        var source = new List<Token> {
+            fromTokenType(TokenType.At),
+            new Token(TokenType.Identifier, "variable_name", 1, 1),
+            fromTokenType(TokenType.Equal),
+            fromTokenType(TokenType.At),
+            // Todo: test for no @
+            new Token(TokenType.Identifier, "variable_name_2", 1, 1),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script);
+        var variableAssignment = validateVariableAssignment(script.Statements[0], "variable_name");
+        validateVariableIdentifier(variableAssignment.Value, "variable_name_2");
+    }
+
+    [Fact]
+    public void TestParamDefinitionWithoutDefaultValue()
+    {
+        // Given
+        var source = new List<Token> {
+            fromTokenType(TokenType.Param),
+            fromTokenType(TokenType.At),
+            new Token(TokenType.Identifier, "variable_name", 1, 1),
+            fromTokenType(TokenType.Colon),
+            new Token(TokenType.Identifier, "type", 1, 1),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script);
+        var variableAssignment = validateParam(script.Statements[0], "variable_name", "type", false);
+    }
+
+    [Fact]
+    public void TestParamDefinitionWithDefaultValue()
+    {
+        // Given
+        var source = new List<Token> {
+            fromTokenType(TokenType.Param),
+            fromTokenType(TokenType.At),
+            new Token(TokenType.Identifier, "variable_name", 1, 1),
+            fromTokenType(TokenType.Colon),
+            new Token(TokenType.Identifier, "type", 1, 1),
+            fromTokenType(TokenType.Equal),
+            new Token(TokenType.Decimal, 1.1m, 1, 1),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script);
+        var variableAssignment = validateParam(script.Statements[0], "variable_name", "type", true);
+        ValidateNumberLiteral(variableAssignment.DefaultValue!, 1.1m);
+    }
+
+
+    [Fact]
+    public void TestParamDefinitionWithoutType()
+    {
+        // Given
+        var source = new List<Token> {
+            fromTokenType(TokenType.Param),
+            fromTokenType(TokenType.At),
+            new Token(TokenType.Identifier, "variable_name", 1, 1),
+            fromTokenType(TokenType.Equal),
+            new Token(TokenType.Decimal, 1.1m, 1, 1),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateError(parser, "Expected ':'", TokenType.Equal);
+    }
+
+    [Fact]
     public void TestMissingSemiColumn()
     {
         // Given
@@ -466,6 +588,17 @@ public class ParserTest
         script.Statements.Should().HaveCount(statementCount);
     }
 
+    private ParseError validateError(Parser parser, string expectedMessage, TokenType expectedTokenType)
+    {
+        parser.HasErrors.Should().BeTrue();
+        parser.Errors.Should().HaveCount(1);
+        parser.Errors[0].Should().BeOfType<ParseError>();
+        var error = (ParseError)parser.Errors[0];
+        error.Problem.Should().Be(expectedMessage);
+        error.Token.TokenType.Should().Be(expectedTokenType);
+        return error;
+    }
+
     private Assignment validateAssignment(Statement statement, string expectedVariableName)
     {
         statement.Should().BeOfType<Assignment>();
@@ -586,26 +719,70 @@ public class ParserTest
         return expression;
     }
 
-    private StringLiteral ValidateStringLiteral(Field field, string expectedValue)
+    private StringLiteral ValidateStringLiteral(Node field, string expectedValue)
     {
         field.Should().BeOfType<StringLiteral>();
         var stringLiteral = (StringLiteral)field;
         stringLiteral.Value.Should().Be(expectedValue);
         return stringLiteral;
     }
-    private NumberLiteral ValidateNumberLiteral(Field field, decimal expectedValue)
+    private NumberLiteral ValidateNumberLiteral(Node field, decimal expectedValue)
     {
         field.Should().BeOfType<NumberLiteral>();
         var numberLiteral = (NumberLiteral)field;
         numberLiteral.Value.Should().Be(expectedValue);
         return numberLiteral;
     }
-    private BooleanLiteral ValidateBooleanLiteral(Field field, bool expectedValue)
+    private BooleanLiteral ValidateBooleanLiteral(Node field, bool expectedValue)
     {
         field.Should().BeOfType<BooleanLiteral>();
         var booleanLiteral = (BooleanLiteral)field;
         booleanLiteral.Value.Should().Be(expectedValue);
         return booleanLiteral;
+    }
+
+    private VariableDefinition ValidateVariableDefinition(Statement statement, string expectedName, string expectedType)
+    {
+        statement.Should().BeOfType<VariableDefinition>();
+        var variableDefinition = (VariableDefinition)statement;
+        variableDefinition.VariableName.Should().Be(expectedName);
+        variableDefinition.Type.Should().Be(expectedType);
+        variableDefinition.Value.Should().NotBeNull();
+        return variableDefinition;
+    }
+
+    private VariableAssignment validateVariableAssignment(Statement statement, string expectedVariableName)
+    {
+        statement.Should().BeOfType<VariableAssignment>();
+        var variableAssignment = (VariableAssignment)statement;
+        variableAssignment.VariableName.Should().Be(expectedVariableName);
+        variableAssignment.Value.Should().NotBeNull();
+        return variableAssignment;
+    }
+
+    private VariableIdentifier validateVariableIdentifier(Node node, string expectedName)
+    {
+        node.Should().BeOfType<VariableIdentifier>();
+        var variableIdentifier = (VariableIdentifier)node;
+        variableIdentifier.VariableName.Should().Be(expectedName);
+        return variableIdentifier;
+    }
+
+    private Param validateParam(Statement statement, string expectedName, string expectedType, bool expectDefaultValue)
+    {
+        statement.Should().BeOfType<Param>();
+        var param = (Param)statement;
+        param.Name.Should().Be(expectedName);
+        param.Type.Should().Be(expectedType);
+        if (expectDefaultValue)
+        {
+            param.DefaultValue.Should().NotBeNull();
+        }
+        else
+        {
+            param.DefaultValue.Should().BeNull();
+        }
+        return param;
     }
 
     private Token fromTokenType(TokenType type)

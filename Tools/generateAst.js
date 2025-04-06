@@ -16,11 +16,15 @@ function run() {
     "JoinQuery": ["SelectSource left", "AliasableSource right", "JoinType joinType", "TsExpression condition"],
     "NumberLiteral": ["decimal value"], // since we output TS we only need number
     "Output": ["Source source", "string outputFile"],
+    "Param": ["string name", "string type", "VariableValue? defaultValue"],
     "SelectQuery": ["FieldSpec fields", "SelectSource source", "WhereStatement? where"],
     "Script": ["Statement[] statements"],
     "StringLiteral": ["string value"],
     "Star": [],
     "TsExpression": ["string expression"],
+    "VariableAssignment": ["string variableName", "VariableValue value"],
+    "VariableDefinition": ["string variableName", "string type", "VariableValue value"],
+    "VariableIdentifier": ["string variableName"],
     "WhereStatement": ["TsExpression condition"],
   };
   const compositeTypes = {
@@ -30,7 +34,8 @@ function run() {
     "FieldSpec": ["FieldList", "Star"],
     "SelectSource": ["AliasableSource", "JoinQuery"],
     "Source": ["FileSource", "SelectQuery", "Identifier"],
-    "Statement": ["Assignment", "Output"],
+    "Statement": ["Assignment", "VariableDefinition", "VariableAssignment", "Param", "Output"],
+    "VariableValue": ["TsExpression", "StringLiteral", "NumberLiteral", "BooleanLiteral", "VariableIdentifier"],
   };
   const types = {};
   for (const [type, fields] of Object.entries(terminalTypes)) {

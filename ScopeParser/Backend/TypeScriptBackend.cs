@@ -221,4 +221,24 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     {
         return node.Value.ToString();
     }
+
+    public string VisitVariableAssignment(VariableAssignment node)
+    {
+        throw new NotImplementedException();
+    }
+
+    public string VisitVariableDefinition(VariableDefinition node)
+    {
+        throw new NotImplementedException();
+    }
+
+    public string VisitVariableIdentifier(VariableIdentifier node)
+    {
+        throw new NotImplementedException();
+    }
+
+    public string VisitParam(Param node)
+    {
+        throw new NotImplementedException();
+    }
 }

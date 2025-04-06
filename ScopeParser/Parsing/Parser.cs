@@ -24,7 +24,10 @@ namespace ScopeParser.Parsing
                 {
                     Statement? statement = parseStatement();
                     if (statement != null)
+                    {
                         statements.Add(statement);
+                        // expect(TokenType.SemiColon, ";");
+                    }
                 }
                 catch (ParseError e)
                 {
@@ -36,17 +39,21 @@ namespace ScopeParser.Parsing
         }
 
         /// <summary>
-        /// <STATEMENT> ::= <COMMENT> | <ASSIGNMENT> | <OUTPUT>
+        /// <STATEMENT> ::= <COMMENT> | <ASSIGNMENT> | <VARIABLE_DEFINITION> | <VARIABLE_ASSIGNMENT> | <PARAM> | <OUTPUT>
         /// </summary>
         /// <returns></returns>
         private Statement? parseStatement()
         {
+            Statement? statement;
             if (match(TokenType.SemiColon))
                 return null;
-            var assignment = parseAssignment();
-            if (assignment != null) return assignment;
-            var output = parseOutput();
-            if (output != null) return output;
+            if ((statement = parseAssignment()) != null) return statement;
+            if ((statement = parseOutput()) != null) return statement;
+            if ((statement = parseVariableAssignmentOrDefinition()) != null) return statement;
+            if ((statement = parseParam()) != null) return statement;
+
+            // TODO: Support variable assignment
+            // TODO: Support parameter
             Errors.Add(new ParseError("Unexpected token", next()));
             synchronize();
             return null;
@@ -67,6 +74,116 @@ namespace ScopeParser.Parsing
             var source = parseSource();
             expect(TokenType.SemiColon, ";");
             return new Assignment(token, identifier, source);
+        }
+
+        /// <summary>
+        /// Parses both variable assignment and definition given that they start similarly,
+        /// then branch out to the correct parsing method.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="ParseError"></exception>
+        private Statement? parseVariableAssignmentOrDefinition()
+        {
+            VariableIdentifier? variableIdentifier;
+            if ((variableIdentifier = parseVariableIdentifier()) != null)
+            {
+                // If next token is a colon, it's a variable definition.
+                if (match(TokenType.Colon))
+                    return parseVariableDefinition(variableIdentifier);
+                // Otherwise, it's a variable assignment.
+                return parseVariableAssignment(variableIdentifier);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// <VARIABLE_ASSIGNMENT> ::= <VARIABLE_IDENTIFIER> '=' <VARIABLE_VALUE>
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="ParseError"></exception>
+        private VariableAssignment parseVariableAssignment(VariableIdentifier variableIdentifier)
+        {
+            expect(TokenType.Equal, "=");
+            var value = parseVariableValue();
+            expect(TokenType.SemiColon, ";");
+            return new VariableAssignment(variableIdentifier.Token, variableIdentifier.VariableName, value);
+        }
+
+        /// <summary>
+        /// <VARIABLE_DEFINITION> ::= <VARIABLE_IDENTIFIER> ':' <IDENTIFIER> '=' <VARIABLE_VALUE>   
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="ParseError"></exception>
+        private VariableDefinition parseVariableDefinition(VariableIdentifier variableIdentifier)
+        {
+            // We already consumed the ":" in parseVariableAssignment
+            var type = parseIdentifier(true)!;
+            expect(TokenType.Equal, "=");
+            var value = parseVariableValue();
+            expect(TokenType.SemiColon, ";");
+            return new VariableDefinition(variableIdentifier.Token, variableIdentifier.VariableName, type.Value, value);
+        }
+
+        private VariableIdentifier? parseVariableIdentifier()
+        {
+            if (match(TokenType.At))
+            {
+                var token = previous();
+                var name = expect(TokenType.Identifier, "variable name");
+                return new VariableIdentifier(token, name.ValueAs<string>());
+            }
+            return null;
+        }
+
+        private VariableValue parseVariableValue()
+        {
+            VariableValue? value;
+            if ((value = parseLiteralVariableValue()) != null)
+            {
+                return value!;
+            }
+            else if ((value = parseVariableIdentifier()) != null)
+            {
+                return value;
+            }
+            else if (nextIs(TokenType.TsExpression))
+            {
+                return parseTsExpression();
+            }
+
+            throw new ParseError("Expected variable value", next());
+        }
+
+        private VariableValue? parseLiteralVariableValue()
+        {
+            VariableValue? literalValue;
+            if ((literalValue = parseStringLiteral()) != null || (literalValue = parseNumberLiteral()) != null || (literalValue = parseBooleanLiteral()) != null)
+            {
+                return literalValue;
+            }
+            return null;
+        }
+
+        private Param? parseParam()
+        {
+            if (match(TokenType.Param))
+            {
+                var token = previous();
+                var identifier = parseVariableIdentifier();
+                if (identifier == null)
+                    throw new ParseError("Expected identifier", next());
+                expect(TokenType.Colon, ":");
+                var type = parseIdentifier(true)!;
+                VariableValue? variableValue = null;
+                if (match(TokenType.Equal))
+                {
+                    // Has default value
+                    variableValue = parseVariableValue();
+                }
+                expect(TokenType.SemiColon, ";");
+                return new Param(token, identifier.VariableName, type.Value, variableValue);
+            }
+            return null;
         }
 
         /// <summary>
@@ -273,29 +390,14 @@ namespace ScopeParser.Parsing
         {
             var token = peek();
             FieldValue fieldValue;
+            FieldValue? literalValue;
             if (nextIs(TokenType.TsExpression))
             {
                 fieldValue = parseTsExpression();
             }
-            else if (nextIs(TokenType.String))
+            else if ((literalValue = parseLiteralFieldValue()) != null)
             {
-                var stringToken = expect(TokenType.String, "a string");
-                fieldValue = new StringLiteral(stringToken, stringToken.ValueAs<string>());
-            }
-            else if (nextIs(TokenType.Integer))
-            {
-                var numberToken = next();
-                fieldValue = new NumberLiteral(numberToken, numberToken.ValueAs<decimal>());
-            }
-            else if (nextIs(TokenType.Decimal))
-            {
-                var numberToken = next();
-                fieldValue = new NumberLiteral(numberToken, numberToken.ValueAs<decimal>());
-            }
-            else if (nextIs(TokenType.Boolean))
-            {
-                var numberToken = next();
-                fieldValue = new BooleanLiteral(numberToken, numberToken.ValueAs<bool>());
+                fieldValue = literalValue!;
             }
             else
             {
@@ -319,6 +421,51 @@ namespace ScopeParser.Parsing
                 return new AliasedField(token, fieldValue, alias.Value);
             }
             return fieldValue;
+        }
+
+        private FieldValue? parseLiteralFieldValue()
+        {
+            FieldValue? literalValue;
+            if ((literalValue = parseStringLiteral()) != null || (literalValue = parseNumberLiteral()) != null || (literalValue = parseBooleanLiteral()) != null)
+            {
+                return literalValue;
+            }
+            return null;
+        }
+
+        private StringLiteral? parseStringLiteral()
+        {
+            if (nextIs(TokenType.String))
+            {
+                var stringToken = expect(TokenType.String, "a string");
+                return new StringLiteral(stringToken, stringToken.ValueAs<string>());
+            }
+            return null;
+        }
+
+        private NumberLiteral? parseNumberLiteral()
+        {
+            if (nextIs(TokenType.Integer))
+            {
+                var numberToken = expect(TokenType.Integer, "an integer");
+                return new NumberLiteral(numberToken, numberToken.ValueAs<decimal>());
+            }
+            else if (nextIs(TokenType.Decimal))
+            {
+                var numberToken = expect(TokenType.Decimal, "a decimal");
+                return new NumberLiteral(numberToken, numberToken.ValueAs<decimal>());
+            }
+            return null;
+        }
+
+        private BooleanLiteral? parseBooleanLiteral()
+        {
+            if (nextIs(TokenType.Boolean))
+            {
+                var booleanToken = expect(TokenType.Boolean, "a boolean");
+                return new BooleanLiteral(booleanToken, booleanToken.ValueAs<bool>());
+            }
+            return null;
         }
 
         private TsExpression parseTsExpression()

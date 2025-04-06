@@ -55,6 +55,10 @@ public class Lexer(string source)
                 return new Token(TokenType.RParen, null, line, column);
             case '.':
                 return new Token(TokenType.Dot, null, line, column);
+            case ':':
+                return new Token(TokenType.Colon, null, line, column);
+            case '@':
+                return new Token(TokenType.At, null, line, column);
             case '#':
                 var directive = scanReservedKeyword(directives);
                 if (directive != null)
@@ -151,6 +155,7 @@ public class Lexer(string source)
         { "TO", TokenType.To },
         { "true", TokenType.Boolean },
         { "false", TokenType.Boolean },
+        { "PARAM", TokenType.Param },
     };
 
     private Token? scanReservedKeyword(Dictionary<string, TokenType> reservedKeywords)

@@ -6,15 +6,19 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class NumberLiteral(Token token, decimal value) : FieldValue, VariableValue {
+public class Param(Token token, string name, string type, VariableValue? defaultValue) : Statement {
       
     public T Visit<T>(INodeVisitor<T> visitor)
     {
-        return visitor.VisitNumberLiteral(this);
+        return visitor.VisitParam(this);
     }
 
     public Token Token => token;
       
-    public decimal Value => value;
+    public string Name => name;
+
+    public string Type => type;
+
+    public VariableValue? DefaultValue => defaultValue;
 }
       
