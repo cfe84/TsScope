@@ -1,6 +1,6 @@
 input = EXTRACT id, firstName AS name, roleId, age FROM "inputs/users.csv";
 fields = SELECT id, name, name AS anotherCopyOfName, age FROM input;
-where = SELECT id, name FROM fields WHERE {fields.age >= 30};
+where = SELECT id, name FROM fields WHERE {{fields.age >= 30}};
 OUTPUT fields TO "outputs/select--alias.csv";
 OUTPUT where TO "outputs/select--alias_where.csv";
 OUTPUT

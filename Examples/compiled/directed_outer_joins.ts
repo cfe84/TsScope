@@ -32,7 +32,7 @@ function run() {
   }
 
   abstract class RecordMapper {
-    abstract map(record: SourceRecord): SourceRecord;
+    abstract mapRecord(record: SourceRecord): SourceRecord;
 
     private fieldPositions: Record<string, number> = {};
 
@@ -62,7 +62,7 @@ function run() {
   }
 
   class StarRecordMapper extends RecordMapper {
-    map = (record: SourceRecord) => record;
+    mapRecord = (record: SourceRecord) => record;
   }
 
   type SourceRecord = Field[];
@@ -185,7 +185,7 @@ function run() {
           name: this.fields[i],
           value,
         }));
-        const record = this.recordMapper.map(thisRecord);
+        const record = this.recordMapper.mapRecord(thisRecord);
         this.notifyConsumers(record);
       }
     }
@@ -208,7 +208,7 @@ function run() {
         return;
       }
 
-      const mappedRecord = this.recordMapper.map(record);
+      const mappedRecord = this.recordMapper.mapRecord(record);
 
       this.notifyConsumers(mappedRecord);
     }

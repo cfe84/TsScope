@@ -60,12 +60,14 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     public string VisitFieldList(FieldList node)
     {
         var fields = node.Fields.Select((field, index) => VisitFieldForFieldSpec(field, $"field_{index}"));
+        var headers = string.Join("\n", node.Fields.Select(VisitFieldForHeader));
 
         // Fields are injected as a string list into the snippet.
         var mapRecord = string.Join(",\n", fields);
         var id = recordMapperCount++;
         var mapper = snippetProvider.GetSnippet("recordMapper",
             ("mapRecord", mapRecord),
+            ("mapHeaders", headers),
             ("id", id.ToString())
         );
         recordMappers.Add(mapper);
@@ -99,6 +101,43 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
             ("name", name),
             ("namespace", ns),
             ("value", value)
+        );
+    }
+
+    /// <summary>
+    /// Visiting a field is slightly different because of aliases
+    /// </summary>
+    /// <param name="node"></param>
+    /// <returns></returns>
+    private string VisitFieldForHeader(Field field, int count)
+    {
+        if (field is AliasedField aliasedField)
+        {
+            return snippetProvider.GetSnippet("alias",
+                ("name", aliasedField.Alias)
+            );
+        }
+        else if (field is InputField inputField)
+        {
+            if (inputField.Ns != null)
+            {
+                return snippetProvider.GetSnippet("header",
+                    ("name", inputField.Name),
+                    ("namespace", inputField.Ns),
+                    ("count", count.ToString())
+                );
+            }
+            else
+            {
+                return snippetProvider.GetSnippet("headerWithoutNamespace",
+                    ("name", inputField.Name),
+                    ("count", count.ToString())
+                );
+            }
+
+        }
+        return snippetProvider.GetSnippet("alias",
+            ("name", $"header_{count}")
         );
     }
 

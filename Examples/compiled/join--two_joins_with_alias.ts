@@ -32,7 +32,8 @@ function run() {
   }
 
   abstract class RecordMapper {
-    abstract map(record: SourceRecord): SourceRecord;
+    abstract mapRecord(record: SourceRecord): SourceRecord;
+    abstract mapHeaders(fields: QualifiedName[]): QualifiedName[];
 
     private fieldPositions: Record<string, number> = {};
 
@@ -62,7 +63,8 @@ function run() {
   }
 
   class StarRecordMapper extends RecordMapper {
-    map = (record: SourceRecord) => record;
+    mapRecord = (record: SourceRecord) => record;
+    mapHeaders = (fields: QualifiedName[]): QualifiedName[] => fields;
   }
 
   type SourceRecord = Field[];
@@ -185,7 +187,7 @@ function run() {
           name: this.fields[i],
           value,
         }));
-        const record = this.recordMapper.map(thisRecord);
+        const record = this.recordMapper.mapRecord(thisRecord);
         this.notifyConsumers(record);
       }
     }
@@ -208,7 +210,7 @@ function run() {
         return;
       }
 
-      const mappedRecord = this.recordMapper.map(record);
+      const mappedRecord = this.recordMapper.mapRecord(record);
 
       this.notifyConsumers(mappedRecord);
     }
@@ -319,7 +321,7 @@ function run() {
     ): void {
       for (const leftRecord of keepAll) {
         let match = false;
-        for (const rightRecord of this.rightRecords) {
+        for (const rightRecord of onlyMatching) {
           const fullRecord = [...leftRecord, ...rightRecord];
           if (this.condition(fullRecord)) {
             match = true;
@@ -406,87 +408,76 @@ function run() {
 
   /*%params%*/
   class RecordMapper_0 extends RecordMapper {
-    map(record: SourceRecord): SourceRecord {
-      Object.assign(globalThis, recordToObject(record));
-      return [
-        {
-          name: {
-            namespace: undefined,
-            name: "name",
-          },
-          value: this.findField(record, "users", "firstName"),
-        },
-        {
-          name: {
-            namespace: undefined,
-            name: "role",
-          },
-          value: this.findField(record, "roles", "roleName"),
-        },
-        {
-          name: {
-            namespace: undefined,
-            name: "country",
-          },
-          value: this.findField(record, undefined, "countryName"),
-        },
-      ];
-    }
+  mapRecord(record: SourceRecord): SourceRecord {
+    Object.assign(globalThis, recordToObject(record));
+    return [
+      {
+    name: {
+        namespace: undefined,
+        name: "name",
+    },
+    value: this.findField(record, "users", "firstName"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "role",
+    },
+    value: this.findField(record, "roles", "roleName"),
+},
+{
+    name: {
+        namespace: undefined,
+        name: "country",
+    },
+    value: this.findField(record, undefined, "countryName"),
+}
+    ];
   }
+
+  mapHeaders(headers: QualifiedName[]): QualifiedName[] {
+    const res: QualifiedName[] = [];
+  
+    // Alias field: name
+res.push({ name: "name" });
+// Alias field: role
+res.push({ name: "role" });
+// Alias field: country
+res.push({ name: "country" });
+
+    return res;
+  }
+}
+
   function condition_0(record) {
+  record = recordToObject(record);
+  Object.assign(globalThis, record);
+  const res = // Condition must be on new line to accomodate for the tsIgnore flag
+    country.countryCode === users.country;
+  return res;
+}
+
+function condition_1(record) {
+  record = recordToObject(record);
+  Object.assign(globalThis, record);
+  const res = // Condition must be on new line to accomodate for the tsIgnore flag
+    users.roleId === roles.id;
+  return res;
+}
+
+  const SOURCE__input_0 = new NamedSource(new FileSource("inputs/users.csv", new StarRecordMapper()), "input");
+const SOURCE__roles_0 = new NamedSource(new FileSource("inputs/role.csv", new StarRecordMapper()), "roles");
+const SOURCE__country_0 = new NamedSource(new FileSource("inputs/country.csv", new StarRecordMapper()), "country");
+const SOURCE__withCountry_0 = new NamedSource(new SelectQuerySource(new JoinSource(new JoinSource(new NamedSource(SOURCE__input_0, "users"), SOURCE__roles_0, condition_1, JoinType.Inner), SOURCE__country_0, condition_0, JoinType.Inner), new RecordMapper_0(), (record: any) => {
     record = recordToObject(record);
     Object.assign(globalThis, record);
-    const res = country.countryCode === users.country; // Condition must be on new line to accomodate for the tsIgnore flag
-
+    const res = // Condition must be on new line to accomodate for the tsIgnore flag
+        age >= 30 && roles.roleName === 'Guest'
     return res;
-  }
+}), "withCountry");
+const OUTPUT_FILE__0 = new FileOutput("outputs/join--two_joins_with_alias.csv");
+SOURCE__withCountry_0.registerConsumer(OUTPUT_FILE__0);
 
-  function condition_1(record) {
-    record = recordToObject(record);
-    Object.assign(globalThis, record);
-    const res = users.roleId === roles.id; // Condition must be on new line to accomodate for the tsIgnore flag
-    return res;
-  }
-
-  const SOURCE__input_0 = new NamedSource(
-    new FileSource("inputs/users.csv", new StarRecordMapper()),
-    "input"
-  );
-  const SOURCE__roles_0 = new NamedSource(
-    new FileSource("inputs/role.csv", new StarRecordMapper()),
-    "roles"
-  );
-  const SOURCE__country_0 = new NamedSource(
-    new FileSource("inputs/country.csv", new StarRecordMapper()),
-    "country"
-  );
-  const SOURCE__withCountry_0 = new NamedSource(
-    new SelectQuerySource(
-      new JoinSource(
-        new JoinSource(
-          new NamedSource(SOURCE__input_0, "users"),
-          SOURCE__roles_0,
-          condition_1,
-          JoinType.Inner
-        ),
-        SOURCE__country_0,
-        condition_0,
-        JoinType.Inner
-      ),
-      new RecordMapper_0(),
-      (record: any) => {
-        record = recordToObject(record);
-        Object.assign(globalThis, record);
-        const res = age >= 30 && roles.roleName === "Guest"; // Condition must be on new line to accomodate for the tsIgnore flag
-        return res;
-      }
-    ),
-    "withCountry"
-  );
-  const OUTPUT_FILE__0 = new FileOutput(
-    "outputs/join--two_joins_with_alias.csv"
-  );
-  SOURCE__withCountry_0.registerConsumer(OUTPUT_FILE__0);
 
   ///////////////////////////////////////////////
   //                                           //
@@ -510,5 +501,7 @@ function loadParameter(paramName: string, defaultValue?: string): string {
   }
   return value;
 }
+
+
 
 run();
