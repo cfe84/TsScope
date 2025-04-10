@@ -33,6 +33,7 @@ function run() {
 
   abstract class RecordMapper {
     abstract mapRecord(record: SourceRecord): SourceRecord;
+    abstract mapHeaders(fields: QualifiedName[]): QualifiedName[];
 
     private fieldPositions: Record<string, number> = {};
 
@@ -63,6 +64,10 @@ function run() {
 
   class StarRecordMapper extends RecordMapper {
     mapRecord = (record: SourceRecord) => record;
+    mapHeaders = (fields: QualifiedName[]): QualifiedName[] =>
+      fields.map((field) => ({
+        name: field.name,
+      }));
   }
 
   type SourceRecord = Field[];
@@ -96,6 +101,7 @@ function run() {
   }
 
   interface IConsumer {
+    receiveSchema(source: Source, schema: QualifiedName[]): void;
     receiveRecord(source: Source, record: SourceRecord): void;
     done(source: Source): void;
   }
@@ -117,6 +123,12 @@ function run() {
 
     registerConsumer(consumer: IConsumer): void {
       this.consumers.push(consumer);
+    }
+
+    protected sendSchema(schema: QualifiedName[]): void {
+      this.consumers.forEach((consumer) =>
+        consumer.receiveSchema(this, schema)
+      );
     }
 
     protected notifyConsumers(record: SourceRecord): void {
@@ -180,6 +192,7 @@ function run() {
           name: field,
           namespace: undefined,
         }));
+        this.sendSchema(this.fields);
       } else {
         const thisRecord = valuesInLine.map((value, i) => ({
           name: this.fields[i],
@@ -203,6 +216,11 @@ function run() {
       source.registerConsumer(this);
     }
 
+    receiveSchema(source: Source, schema: QualifiedName[]): void {
+      const headers = this.recordMapper.mapHeaders(schema);
+      this.sendSchema(headers);
+    }
+
     receiveRecord(_: Source, record: SourceRecord): void {
       if (this.where && !this.where(record)) {
         return;
@@ -218,6 +236,15 @@ function run() {
     constructor(private source: Source, private name: string) {
       super();
       source.registerConsumer(this);
+    }
+
+    receiveSchema(source: Source, schema: QualifiedName[]): void {
+      this.sendSchema(
+        schema.map((field) => ({
+          name: field.name,
+          namespace: this.name,
+        }))
+      );
     }
 
     receiveRecord(_: Source, record: SourceRecord): void {
@@ -275,6 +302,8 @@ function run() {
       if (source === this.right) {
         this.rightSchema = schema;
       }
+      const fullSchema = [...this.leftSchema, ...this.rightSchema];
+      this.sendSchema(fullSchema);
     }
 
     override done(source: Source): void {
@@ -348,9 +377,11 @@ function run() {
   }
 
   class FileOutput implements IConsumer, IClosableOutput {
-    private wroteHeader: boolean = false;
-
     constructor(private filePath: string) {}
+
+    receiveSchema(_: Source, schema: QualifiedName[]): void {
+      this.writeHeader(schema);
+    }
 
     done(source: Source): void {
       this.close();
@@ -367,21 +398,13 @@ function run() {
     }
 
     receiveRecord(_: Source, record: SourceRecord): void {
-      if (!this.wroteHeader) {
-        this.writeHeader(
-          _,
-          record.map((field) => field.name)
-        );
-      }
-
       fs.appendFileSync(
         this.filePath,
         record.map((field) => this.fieldToString(field.value)).join(",") + "\n"
       );
     }
 
-    private writeHeader(_: Source, schema: QualifiedName[]): void {
-      this.wroteHeader = true;
+    private writeHeader(schema: QualifiedName[]): void {
       fs.writeFileSync(
         this.filePath,
         schema
