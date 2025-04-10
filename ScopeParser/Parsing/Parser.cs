@@ -331,25 +331,48 @@ namespace ScopeParser.Parsing
         /// </summary>
         private SelectSource parseJoinQuery(SelectSource left)
         {
+            Token? direction = null;
             // Parsing Join is a bit different, since it's left recursive.
             // They're not nested.
             // We use iteration instead of recursion to parse the join.
             while (match(TokenType.Left, TokenType.Right, TokenType.Inner, TokenType.Outer))
             {
-                var joinTypeToken = previous();
-                var joinType = joinTypeToken.TokenType switch
+                var token = previous();
+
+                if (token.TokenType == TokenType.Left || token.TokenType == TokenType.Right)
                 {
-                    TokenType.Left => JoinType.Left,
-                    TokenType.Right => JoinType.Right,
+                    if (direction != null)
+                        throw new ParseError($"Unexpected token: '{token.TokenType.ToString().ToUpper()}'", token);
+                    direction = token;
+                    continue;
+                }
+
+                var joinType = token.TokenType switch
+                {
                     TokenType.Inner => JoinType.Inner,
                     TokenType.Outer => JoinType.Outer,
-                    _ => throw new ParseError("Invalid join type", joinTypeToken)
+                    _ => throw new ParseError("Invalid join type", token)
                 };
+
+                if (direction != null)
+                {
+                    switch (joinType)
+                    {
+                        case JoinType.Inner:
+                            throw new ParseError("Inner join cannot have a direction", direction);
+                        case JoinType.Outer:
+                            joinType = direction.TokenType == TokenType.Left ? JoinType.LeftOuter : JoinType.RightOuter;
+                            break;
+                        default:
+                            throw new ParseError("Invalid join type", token);
+                    }
+                }
+
                 expect(TokenType.Join, "JOIN");
                 var right = parseAliasableSource();
                 expect(TokenType.On, "ON");
                 var condition = parseTsExpression(true)!;
-                left = new JoinQuery(joinTypeToken, left, right, joinType, condition);
+                left = new JoinQuery(direction ?? token, left, right, joinType, condition);
             }
             return left;
         }

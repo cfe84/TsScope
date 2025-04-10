@@ -594,11 +594,15 @@ public class ParserTest
         ValidateBooleanLiteral(fieldList.Fields[2], false);
     }
 
-    [Fact]
-    public void TestOneJoin()
+    [Theory]
+    [InlineData(TokenType.Inner, null, JoinType.Inner)]
+    [InlineData(TokenType.Outer, null, JoinType.Outer)]
+    [InlineData(TokenType.Outer, TokenType.Left, JoinType.LeftOuter)]
+    [InlineData(TokenType.Outer, TokenType.Right, JoinType.RightOuter)]
+    public void TestOneJoin(TokenType joinType, TokenType? direction, JoinType expectedJoinType)
     {
         // Given
-        var source = new List<Token> {
+        List<Token> source = new List<Token?> {
             new Token(TokenType.Identifier, "output", 1, 1),
             fromTokenType(TokenType.Equal),
             fromTokenType(TokenType.Select),
@@ -609,14 +613,15 @@ public class ParserTest
             new Token(TokenType.Identifier, "field_name_2", 1, 3),
             fromTokenType(TokenType.From),
             new Token(TokenType.Identifier, "input", 1, 4),
-            fromTokenType(TokenType.Inner),
+            direction.HasValue ? fromTokenType(direction.Value) : null,
+            fromTokenType(joinType),
             fromTokenType(TokenType.Join),
             new Token(TokenType.Identifier, "input_2", 1, 5),
             fromTokenType(TokenType.On),
             new Token(TokenType.TsExpression, "filter", 1, 6),
             fromTokenType(TokenType.SemiColon),
             fromTokenType(TokenType.EndOfFile),
-        };
+        }.Where(t => t != null).Select(t => t!).ToList();
 
         // when
         var parser = new Parser(source);
@@ -627,10 +632,45 @@ public class ParserTest
         var assignment = validateAssignment(script.Statements[0], "output");
         var select = validateSelectQuery(assignment.Source);
         validateInputFields(select.Fields, ("input", "field_name"), (null, "field_name_2"));
-        var join = validateJoinQuery(select.Source);
+        var join = validateJoinQuery(select.Source, expectedJoinType);
         validateIdentifierSource(join.Left, "input");
         validateIdentifierSource(join.Right, "input_2");
         validateTsExpression(join.Condition, "filter");
+    }
+
+    [Theory]
+    [InlineData(TokenType.Inner, TokenType.Left, TokenType.Left, "Inner join cannot have a direction")]
+    [InlineData(TokenType.Left, TokenType.Left, TokenType.Left, "Unexpected token: 'LEFT'")]
+    public void TestInvalidJoins(TokenType joinType, TokenType? direction, TokenType erroneousToken, string expectedError)
+    {
+        // Given
+        List<Token> source = new List<Token?> {
+            new Token(TokenType.Identifier, "output", 1, 1),
+            fromTokenType(TokenType.Equal),
+            fromTokenType(TokenType.Select),
+            new Token(TokenType.Identifier, "input", 1, 2),
+            fromTokenType(TokenType.Dot),
+            new Token(TokenType.Identifier, "field_name", 1, 2),
+            fromTokenType(TokenType.Comma),
+            new Token(TokenType.Identifier, "field_name_2", 1, 3),
+            fromTokenType(TokenType.From),
+            new Token(TokenType.Identifier, "input", 1, 4),
+            direction.HasValue ? fromTokenType(direction.Value) : null,
+            fromTokenType(joinType),
+            fromTokenType(TokenType.Join),
+            new Token(TokenType.Identifier, "input_2", 1, 5),
+            fromTokenType(TokenType.On),
+            new Token(TokenType.TsExpression, "filter", 1, 6),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        }.Where(t => t != null).Select(t => t!).ToList();
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateError(parser, expectedError, erroneousToken);
     }
 
     [Fact]
@@ -673,8 +713,8 @@ public class ParserTest
         var assignment = validateAssignment(script.Statements[0], "output");
         var select = validateSelectQuery(assignment.Source);
         validateInputFields(select.Fields, ("input", "field_name"), (null, "field_name_2"));
-        var secondJoin = validateJoinQuery(select.Source);
-        var firstJoin = validateJoinQuery(secondJoin.Left);
+        var secondJoin = validateJoinQuery(select.Source, JoinType.Outer);
+        var firstJoin = validateJoinQuery(secondJoin.Left, JoinType.Inner);
         validateIdentifierSource(firstJoin.Left, "input");
         validateAliasedSource(firstJoin.Right, "input_2", "input_2_alias");
         validateTsExpression(firstJoin.Condition, "filter_1");
@@ -768,10 +808,12 @@ public class ParserTest
         return (WhereStatement)selectQuery.Where;
     }
 
-    private JoinQuery validateJoinQuery(SelectSource source)
+    private JoinQuery validateJoinQuery(SelectSource source, JoinType expectedJoinType)
     {
         source.Should().BeOfType<JoinQuery>();
-        return (JoinQuery)source;
+        var join = (JoinQuery)source;
+        join.JoinType.Should().Be(expectedJoinType);
+        return join;
     }
 
     private Identifier validateIdentifierSource(SelectSource source, string expected)

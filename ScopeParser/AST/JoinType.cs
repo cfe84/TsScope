@@ -3,8 +3,8 @@ namespace ScopeParser.Ast
     public enum JoinType
     {
         Inner,
-        Left,
-        Right,
+        LeftOuter,
+        RightOuter,
         Outer,
     }
 }

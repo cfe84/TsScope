@@ -319,7 +319,7 @@ function run() {
     ): void {
       for (const leftRecord of keepAll) {
         let match = false;
-        for (const rightRecord of this.rightRecords) {
+        for (const rightRecord of onlyMatching) {
           const fullRecord = [...leftRecord, ...rightRecord];
           if (this.condition(fullRecord)) {
             match = true;
@@ -405,88 +405,48 @@ function run() {
   // This is where your script code starts.
 
   /*%params%*/
-  class RecordMapper_0 extends RecordMapper {
-    map(record: SourceRecord): SourceRecord {
-      Object.assign(globalThis, recordToObject(record));
-      return [
-        {
-          name: {
-            namespace: undefined,
-            name: "name",
-          },
-          value: this.findField(record, "users", "firstName"),
-        },
-        {
-          name: {
-            namespace: undefined,
-            name: "role",
-          },
-          value: this.findField(record, "roles", "roleName"),
-        },
-        {
-          name: {
-            namespace: undefined,
-            name: "country",
-          },
-          value: this.findField(record, undefined, "countryName"),
-        },
-      ];
-    }
-  }
+  
   function condition_0(record) {
+  record = recordToObject(record);
+  Object.assign(globalThis, record);
+  const res = // Condition must be on new line to accomodate for the tsIgnore flag
+    users.country === countries.countryCode;
+  return res;
+}
+
+function condition_1(record) {
+  record = recordToObject(record);
+  Object.assign(globalThis, record);
+  const res = // Condition must be on new line to accomodate for the tsIgnore flag
+    roles.id === users.roleId;
+  return res;
+}
+
+  let output: string = "outputs/directed_outer_joins";
+
+const SOURCE__users_0 = new NamedSource(new FileSource("inputs/users.csv", new StarRecordMapper()), "users");
+const SOURCE__roles_0 = new NamedSource(new FileSource("inputs/role.csv", new StarRecordMapper()), "roles");
+const SOURCE__countries_0 = new NamedSource(new FileSource("inputs/country.csv", new StarRecordMapper()), "countries");
+const SOURCE__users_with_incorrect_countries_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__users_0, SOURCE__countries_0, condition_0, JoinType.LeftOuter), new StarRecordMapper(), (record: any) => {
     record = recordToObject(record);
     Object.assign(globalThis, record);
-    const res = country.countryCode === users.country; // Condition must be on new line to accomodate for the tsIgnore flag
-
+    const res = // Condition must be on new line to accomodate for the tsIgnore flag
+        !record.countryCode
     return res;
-  }
-
-  function condition_1(record) {
+}), "users_with_incorrect_countries");
+const SOURCE__users_with_incorrect_roles_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__roles_0, SOURCE__users_0, condition_1, JoinType.RightOuter), new StarRecordMapper(), (record: any) => {
     record = recordToObject(record);
     Object.assign(globalThis, record);
-    const res = users.roleId === roles.id; // Condition must be on new line to accomodate for the tsIgnore flag
+    const res = // Condition must be on new line to accomodate for the tsIgnore flag
+        !record.roleName
     return res;
-  }
+}), "users_with_incorrect_roles");
+const OUTPUT_FILE__0 = new FileOutput(`${output}--users_with_incorrect_countries.csv`);
+SOURCE__users_with_incorrect_countries_0.registerConsumer(OUTPUT_FILE__0);
 
-  const SOURCE__input_0 = new NamedSource(
-    new FileSource("inputs/users.csv", new StarRecordMapper()),
-    "input"
-  );
-  const SOURCE__roles_0 = new NamedSource(
-    new FileSource("inputs/role.csv", new StarRecordMapper()),
-    "roles"
-  );
-  const SOURCE__country_0 = new NamedSource(
-    new FileSource("inputs/country.csv", new StarRecordMapper()),
-    "country"
-  );
-  const SOURCE__withCountry_0 = new NamedSource(
-    new SelectQuerySource(
-      new JoinSource(
-        new JoinSource(
-          new NamedSource(SOURCE__input_0, "users"),
-          SOURCE__roles_0,
-          condition_1,
-          JoinType.Inner
-        ),
-        SOURCE__country_0,
-        condition_0,
-        JoinType.Inner
-      ),
-      new RecordMapper_0(),
-      (record: any) => {
-        record = recordToObject(record);
-        Object.assign(globalThis, record);
-        const res = age >= 30 && roles.roleName === "Guest"; // Condition must be on new line to accomodate for the tsIgnore flag
-        return res;
-      }
-    ),
-    "withCountry"
-  );
-  const OUTPUT_FILE__0 = new FileOutput(
-    "outputs/join--two_joins_with_alias.csv"
-  );
-  SOURCE__withCountry_0.registerConsumer(OUTPUT_FILE__0);
+const OUTPUT_FILE__1 = new FileOutput(`${output}--users_with_incorrect_roles.csv`);
+SOURCE__users_with_incorrect_roles_0.registerConsumer(OUTPUT_FILE__1);
+
 
   ///////////////////////////////////////////////
   //                                           //
@@ -510,5 +470,7 @@ function loadParameter(paramName: string, defaultValue?: string): string {
   }
   return value;
 }
+
+
 
 run();

@@ -231,8 +231,9 @@ function run(/*%paramSignatures%*/) {
 
   enum JoinType {
     Inner = "Inner",
-    Left = "Left",
-    Right = "Right",
+    LeftOuter = "LeftOuter",
+    RightOuter = "RightOuter",
+    Outer = "Outer",
   }
 
   type JoinCondition = (record: SourceRecord) => boolean;
@@ -290,6 +291,12 @@ function run(/*%paramSignatures%*/) {
     private start(): void {
       if (this.joinType === JoinType.Inner) {
         this.innerJoin();
+      } else if (this.joinType === JoinType.LeftOuter) {
+        this.directionalOuterJoin(this.leftRecords, this.rightRecords);
+      } else if (this.joinType === JoinType.RightOuter) {
+        this.directionalOuterJoin(this.rightRecords, this.leftRecords);
+      } else {
+        throw Error(`Join type not implemented: ${this.joinType}`);
       }
       // Other types not implemented yet.
       this.notifyConsumersDone();
@@ -304,6 +311,35 @@ function run(/*%paramSignatures%*/) {
           }
         }
       }
+    }
+
+    private directionalOuterJoin(
+      keepAll: SourceRecord[],
+      onlyMatching: SourceRecord[]
+    ): void {
+      for (const leftRecord of keepAll) {
+        let match = false;
+        for (const rightRecord of onlyMatching) {
+          const fullRecord = [...leftRecord, ...rightRecord];
+          if (this.condition(fullRecord)) {
+            match = true;
+            this.notifyConsumers(fullRecord);
+          }
+        }
+        if (!match) {
+          const emptyRecord = this.generateEmptyRecord(leftRecord);
+          const fullRecord = [...leftRecord, ...emptyRecord];
+          this.notifyConsumers(fullRecord);
+        }
+      }
+    }
+
+    private generateEmptyRecord(exampleSource: SourceRecord): SourceRecord {
+      const emptyRecord: SourceRecord = [];
+      for (const field of exampleSource) {
+        emptyRecord.push({ name: field.name, value: null });
+      }
+      return emptyRecord;
     }
   }
 

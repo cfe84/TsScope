@@ -1,0 +1,11 @@
+@output: string = "outputs/directed_outer_joins";
+
+users = EXTRACT * FROM "inputs/users.csv";
+roles = EXTRACT * FROM "inputs/role.csv";
+countries = EXTRACT * FROM "inputs/country.csv";
+
+users_with_incorrect_countries = SELECT * FROM users LEFT OUTER JOIN countries ON {{users.country === countries.countryCode}} WHERE {{ !record.countryCode }};
+users_with_incorrect_roles = SELECT * FROM roles RIGHT OUTER JOIN users ON {{ roles.id === users.roleId }} WHERE {{ !record.roleName }};
+
+OUTPUT users_with_incorrect_countries TO {{`${output}--users_with_incorrect_countries.csv`}};
+OUTPUT users_with_incorrect_roles TO {{`${output}--users_with_incorrect_roles.csv`}};
