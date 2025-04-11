@@ -6,30 +6,24 @@ import * as path from "path";
  * "Custom" code is inserted lower down.
  */
 
+interface QualifiedName {
+  name: string;
+  namespace?: string;
+}
+
+interface Field {
+  name: QualifiedName;
+  value: any;
+}
+
+type SourceRecord = Field[];
+
 function run() {
   ///////////////////////////////////////////////
   //                                           //
   //             Start boilerplate             //
   //                                           //
   ///////////////////////////////////////////////
-
-  interface QualifiedName {
-    name: string;
-    namespace?: string;
-  }
-
-  interface Field {
-    name: QualifiedName;
-    value: any;
-  }
-
-  interface FieldsSpec {
-    fieldFilter: (field: QualifiedName) => boolean;
-    missingFields: (field: QualifiedName[]) => {
-      result: string[];
-      position: string;
-    };
-  }
 
   abstract class RecordMapper {
     abstract mapRecord(record: SourceRecord): SourceRecord;
@@ -69,8 +63,6 @@ function run() {
         name: field.name,
       }));
   }
-
-  type SourceRecord = Field[];
 
   function recordToObject(record: SourceRecord): { [key: string]: any } {
     const obj: { [key: string]: any } = {};
@@ -116,12 +108,7 @@ function run() {
     private static sourceCount = 0;
     private consumers: IConsumer[] = [];
 
-    private _id: string = (Source.sourceCount++).toString();
-    public get id(): string {
-      return this._id;
-    }
-
-    registerConsumer(consumer: IConsumer): void {
+    public registerConsumer(consumer: IConsumer): void {
       this.consumers.push(consumer);
     }
 
@@ -483,17 +470,23 @@ SOURCE__users_with_incorrect_roles_0.registerConsumer(OUTPUT_FILE__1);
   /*%exports%*/
 }
 
-function loadParameter(paramName: string, defaultValue?: string): string {
-  const value = process.env[paramName];
-  if (value === undefined) {
-    if (defaultValue === undefined) {
-      throw new Error(`Missing parameter '${paramName}'`);
+const isUsedAsExecutable = process.argv[1] === __filename;
+
+if (isUsedAsExecutable) {
+  function loadParameter(paramName: string, defaultValue?: string): string {
+    const value = process.env[paramName];
+    if (value === undefined) {
+      if (defaultValue === undefined) {
+        throw new Error(`Missing parameter '${paramName}'`);
+      }
+      return defaultValue;
     }
-    return defaultValue;
+    return value;
   }
-  return value;
+
+  
+
+  run();
 }
 
-
-
-run();
+export { run, QualifiedName, Field, SourceRecord };

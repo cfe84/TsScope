@@ -48,10 +48,21 @@ namespace ScopeParser.Parsing
             Statement? statement;
             if (match(TokenType.SemiColon))
                 return null;
-            if ((statement = parseAssignment()) != null) return statement;
-            if ((statement = parseOutput()) != null) return statement;
-            if ((statement = parseVariableAssignmentOrDefinition()) != null) return statement;
-            if ((statement = parseParam()) != null) return statement;
+            var statementParsers = new List<Func<Statement?>>
+            {
+                parseParam,
+                parseImport,
+                parseExport,
+                parseAssignment,
+                parseOutput,
+                parseVariableAssignmentOrDefinition,
+            };
+            foreach (var parser in statementParsers)
+            {
+                statement = parser();
+                if (statement != null)
+                    return statement;
+            }
             Errors.Add(new ParseError("Unexpected token", next()));
             synchronize();
             return null;
@@ -212,6 +223,63 @@ namespace ScopeParser.Parsing
 
                 var outputFile = parseStringValue();
                 return new Output(token, source, outputFile);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// <IMPORT> = "IMPORT" <IDENTIFIER> "{" <TYPED_FIELD_LIST> "}"
+        public Import? parseImport()
+        {
+            if (match(TokenType.Import))
+            {
+                var token = previous();
+                var name = parseIdentifier(true)!;
+                expect(TokenType.LBracket, "{");
+                var fields = new List<TypedField>();
+                while (!nextIs(TokenType.RBracket))
+                {
+                    if (match(TokenType.Comma))
+                    {
+                        // Just ignore commas. That technically makes them optional.
+                        continue;
+                    }
+                    var field = parseTypedField();
+                    if (field == null)
+                        continue;
+                    fields.Add(field);
+                }
+                next();
+                return new Import(token, name.Value, fields);
+            }
+            return null;
+        }
+
+        public TypedField? parseTypedField()
+        {
+            var name = parseIdentifier(true)!;
+            expect(TokenType.Colon, ":");
+            var type = parseIdentifier(true)!;
+            return new TypedField(name.Token, name.Value, type.Value);
+        }
+
+        /// <summary>
+        /// <EXPORT> = "EXPORT" <SOURCE> [ "AS" <IDENTIFIER> ]
+        /// </summary>
+        /// <returns></returns>
+        private Export? parseExport()
+        {
+            if (match(TokenType.Export))
+            {
+                var token = previous();
+                var source = parseSource();
+                string? name = null;
+                if (nextIs(TokenType.As))
+                {
+                    next();
+                    name = parseIdentifier(true)!.Value;
+                }
+                return new Export(token, source, name);
             }
             return null;
         }

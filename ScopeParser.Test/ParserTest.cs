@@ -5,6 +5,7 @@ using ScopeParser.Lexing;
 using ScopeParser.Parsing;
 using FluentAssertions;
 using ScopeParser.Ast;
+using Newtonsoft.Json.Schema;
 
 public class ParserTest
 {
@@ -752,6 +753,84 @@ public class ParserTest
         validateWhereQuery(select, "filter");
     }
 
+    [Fact]
+    public void TestExportUnaliased()
+    {
+        // Given
+        var source = new List<Token> {
+            fromTokenType(TokenType.Export),
+            new Token(TokenType.Identifier, "source_name", 1, 1),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script, 1);
+        var export = validateExport(script.Statements[0], null);
+        validateIdentifierSource(export.Source, "source_name");
+    }
+
+    [Fact]
+    public void TestExportAliased()
+    {
+        // Given
+        var source = new List<Token> {
+            fromTokenType(TokenType.Export),
+            new Token(TokenType.Identifier, "source_name", 1, 1),
+            fromTokenType(TokenType.As),
+            new Token(TokenType.Identifier, "source_name_alias", 1, 1),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        };
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script, 1);
+        var export = validateExport(script.Statements[0], "source_name_alias");
+        validateIdentifierSource(export.Source, "source_name");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TestImport(bool extraComma)
+    {
+        // Given
+        var source = new List<Token?> {
+            fromTokenType(TokenType.Import),
+            new Token(TokenType.Identifier, "source_name", 1, 1),
+            fromTokenType(TokenType.LBracket),
+            new Token(TokenType.Identifier, "field_name_1", 1, 1),
+            fromTokenType(TokenType.Colon),
+            new Token(TokenType.Identifier, "field_type_1", 1, 1),
+            fromTokenType(TokenType.Comma),
+            new Token(TokenType.Identifier, "field_name_2", 1, 1),
+            fromTokenType(TokenType.Colon),
+            new Token(TokenType.Identifier, "field_type_2", 1, 1),
+            extraComma ? fromTokenType(TokenType.Comma) : null,
+            fromTokenType(TokenType.RBracket),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        }.Where(t => t != null).Select(t => t!).ToList();
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script, 1);
+        var import = validateImport(script.Statements[0], "source_name", 2);
+        validateTypedField(import.Fields[0], "field_name_1", "field_type_1");
+        validateTypedField(import.Fields[1], "field_name_2", "field_type_2");
+    }
+
     private void validateScript(Parser parser, Script script, int statementCount = 1)
     {
         parser.HasErrors.Should().BeFalse();
@@ -953,6 +1032,32 @@ public class ParserTest
             param.DefaultValue.Should().BeNull();
         }
         return param;
+    }
+
+    private Export validateExport(Statement statement, string? expectedName)
+    {
+        statement.Should().BeOfType<Export>();
+        var export = (Export)statement;
+        export.ExportName.Should().Be(expectedName);
+        return export;
+    }
+
+    private Import validateImport(Statement statement, string expectedName, int fieldCount)
+    {
+        statement.Should().BeOfType<Import>();
+        var import = (Import)statement;
+        import.Name.Should().Be(expectedName);
+        import.Fields.Should().HaveCount(fieldCount);
+        return import;
+    }
+
+    private TypedField validateTypedField(TypedField field, string expectedName, string expectedType)
+    {
+        field.Should().BeOfType<TypedField>();
+        var typedField = (TypedField)field;
+        typedField.Name.Should().Be(expectedName);
+        typedField.Type.Should().Be(expectedType);
+        return typedField;
     }
 
     private Token fromTokenType(TokenType type)

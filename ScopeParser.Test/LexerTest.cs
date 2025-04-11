@@ -133,6 +133,8 @@ public class LexerTest
     [InlineData("ON", TokenType.On)]
     [InlineData("TO", TokenType.To)]
     [InlineData("PARAM", TokenType.Param)]
+    [InlineData("IMPORT", TokenType.Import)]
+    [InlineData("EXPORT", TokenType.Export)]
     public void TestDirectiveAndKeywords(string input, TokenType expected)
     {
         // Given
@@ -244,7 +246,6 @@ public class LexerTest
 
     [Theory]
     [InlineData("%")]
-    [InlineData("{")]
     public void TestUnexpectedCharacter(string input)
     {
         // Given
@@ -317,6 +318,8 @@ public class LexerTest
     [InlineData(":", TokenType.Colon)]
     [InlineData(";", TokenType.SemiColon)]
     [InlineData("@", TokenType.At)]
+    [InlineData("{", TokenType.LBracket)]
+    [InlineData("}", TokenType.RBracket)]
     public void TestLexesSpecialCharacters(string input, TokenType expected)
     {
         // Given

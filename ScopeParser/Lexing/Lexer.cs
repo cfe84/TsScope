@@ -59,6 +59,8 @@ public class Lexer(string source)
                 return new Token(TokenType.Colon, null, line, column);
             case '@':
                 return new Token(TokenType.At, null, line, column);
+            case '}':
+                return new Token(TokenType.RBracket, null, line, column);
             case '#':
                 var directive = scanReservedKeyword(directives);
                 if (directive != null)
@@ -67,7 +69,7 @@ public class Lexer(string source)
             case '"':
                 return scanString();
             case '{':
-                return scanTsExpression();
+                return scanTsOrLeftBracket();
             case '/':
                 return comment(c);
             default:
@@ -156,6 +158,8 @@ public class Lexer(string source)
         { "true", TokenType.Boolean },
         { "false", TokenType.Boolean },
         { "PARAM", TokenType.Param },
+        { "IMPORT", TokenType.Import },
+        { "EXPORT", TokenType.Export },
     };
 
     private Token? scanReservedKeyword(Dictionary<string, TokenType> reservedKeywords)
@@ -210,15 +214,25 @@ public class Lexer(string source)
         return new Token(TokenType.String, str.ToString(), startingLine, startingColumn);
     }
 
+    private Token scanTsOrLeftBracket()
+    {
+        if (peek() != '{')
+        {
+            return new Token(TokenType.LBracket, null, startingLine, startingColumn);
+        }
+        else
+        {
+            // We have a ts expression
+            next();
+            return scanTsExpression();
+        }
+    }
+
     // To simplify the process, ts expressions are between {}
     private Token scanTsExpression()
     {
         var str = new StringBuilder();
         var isEscaped = false;
-        if (next() != '{')
-        {
-            throw new LexError("Unexpected character '{'", startingLine, startingColumn);
-        }
         while (!isFinished() && (peek(2) != "}}" || isEscaped))
         {
             if (peek() == '\\')

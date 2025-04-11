@@ -304,4 +304,19 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         parameterInvokes.Add(node.Name);
         return "";
     }
+
+    public string VisitExport(Export node)
+    {
+        throw new NotImplementedException();
+    }
+
+    public string VisitImport(Import node)
+    {
+        throw new NotImplementedException();
+    }
+
+    public string VisitTypedField(TypedField node)
+    {
+        throw new NotImplementedException();
+    }
 }

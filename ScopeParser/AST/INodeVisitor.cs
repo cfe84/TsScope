@@ -14,9 +14,11 @@ public interface INodeVisitor<T> {
     public T VisitAssignment(Assignment node);
     public T VisitBooleanLiteral(BooleanLiteral node);
     public T VisitInputField(InputField node);
+    public T VisitExport(Export node);
     public T VisitFieldList(FieldList node);
     public T VisitFileSource(FileSource node);
     public T VisitIdentifier(Identifier node);
+    public T VisitImport(Import node);
     public T VisitJoinQuery(JoinQuery node);
     public T VisitNumberLiteral(NumberLiteral node);
     public T VisitOutput(Output node);
@@ -26,6 +28,7 @@ public interface INodeVisitor<T> {
     public T VisitStringLiteral(StringLiteral node);
     public T VisitStar(Star node);
     public T VisitTsExpression(TsExpression node);
+    public T VisitTypedField(TypedField node);
     public T VisitVariableAssignment(VariableAssignment node);
     public T VisitVariableDefinition(VariableDefinition node);
     public T VisitVariableIdentifier(VariableIdentifier node);

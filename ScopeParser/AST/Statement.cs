@@ -13,5 +13,7 @@ namespace ScopeParser.Ast;
 /// - VariableAssignment
 /// - Param
 /// - Output
+/// - Import
+/// - Export
 /// </summary>
 public interface Statement : Node {}

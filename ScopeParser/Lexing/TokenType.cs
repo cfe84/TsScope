@@ -12,11 +12,11 @@ namespace ScopeParser.Lexing
 
     Select, Extract, From, Where, As, On, Inner, Left, Right, Outer, Join,
 
-    Output, To,
+    Output, To, Import, Export,
 
     String, Integer, Decimal, Boolean,
 
-    LParen, RParen,
+    LParen, RParen, LBracket, RBracket,
 
     Star, Comma, SemiColon, Dot, Colon, At,
 

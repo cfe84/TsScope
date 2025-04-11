@@ -6,6 +6,17 @@ import * as path from "path";
  * "Custom" code is inserted lower down.
  */
 
+/**
+ * A source of records.
+ *
+ * Your object or class should call the "record" method to send records to the consumers.
+ * The "close" method should be called when the source is done sending records.
+ */
+interface ISource {
+  sendRecord(rec: any): void;
+  close(): void;
+}
+
 function run(/*%paramSignatures%*/) {
   ///////////////////////////////////////////////
   //                                           //
@@ -23,13 +34,7 @@ function run(/*%paramSignatures%*/) {
     value: any;
   }
 
-  interface FieldsSpec {
-    fieldFilter: (field: QualifiedName) => boolean;
-    missingFields: (field: QualifiedName[]) => {
-      result: string[];
-      position: string;
-    };
-  }
+  type SourceRecord = Field[];
 
   abstract class RecordMapper {
     abstract mapRecord(record: SourceRecord): SourceRecord;
@@ -69,8 +74,6 @@ function run(/*%paramSignatures%*/) {
         name: field.name,
       }));
   }
-
-  type SourceRecord = Field[];
 
   function recordToObject(record: SourceRecord): { [key: string]: any } {
     const obj: { [key: string]: any } = {};
@@ -116,12 +119,7 @@ function run(/*%paramSignatures%*/) {
     private static sourceCount = 0;
     private consumers: IConsumer[] = [];
 
-    private _id: string = (Source.sourceCount++).toString();
-    public get id(): string {
-      return this._id;
-    }
-
-    registerConsumer(consumer: IConsumer): void {
+    public registerConsumer(consumer: IConsumer): void {
       this.consumers.push(consumer);
     }
 
@@ -148,6 +146,48 @@ function run(/*%paramSignatures%*/) {
 
   interface IStartable {
     start(): void;
+  }
+
+  /**
+   * This is for library mode only.
+   * It converts a sink to a source.
+   */
+  class SinkSource extends Source {
+    constructor(private source: ISource) {
+      super();
+      source.record = this.record.bind(this);
+      source.close = this.close.bind(this);
+    }
+
+    record(record: any): void {
+      const fields: SourceRecord = Object.entries(record).map(
+        ([key, value]) => ({
+          name: { name: key },
+          value,
+        })
+      );
+      this.notifyConsumers(fields);
+    }
+
+    close(): void {
+      this.done(this);
+    }
+  }
+
+  class SinkConsumer implements IConsumer {
+    constructor(private sink: ISource) {}
+
+    receiveSchema(_: Source, schema: QualifiedName[]): void {
+      this.sink.record(schema);
+    }
+
+    receiveRecord(_: Source, record: SourceRecord): void {
+      this.sink.record(recordToObject(record));
+    }
+
+    done(source: Source): void {
+      this.sink.close();
+    }
   }
 
   class FileSource extends Source implements IStartable {
@@ -312,6 +352,9 @@ function run(/*%paramSignatures%*/) {
       } else if (source === this.right) {
         this.rightDone = true;
       }
+      // Todo: There's probably a smarter way to do that.
+      // We only need one of the joins to be done before we
+      // can start matching the rest of the incomings.
       if (this.leftDone && this.rightDone) {
         this.start();
       }
@@ -444,17 +487,23 @@ function run(/*%paramSignatures%*/) {
   /*%exports%*/
 }
 
-function loadParameter(paramName: string, defaultValue?: string): string {
-  const value = process.env[paramName];
-  if (value === undefined) {
-    if (defaultValue === undefined) {
-      throw new Error(`Missing parameter '${paramName}'`);
+const isUsedAsExecutable = process.argv[1] === __filename;
+
+if (isUsedAsExecutable) {
+  function loadParameter(paramName: string, defaultValue?: string): string {
+    const value = process.env[paramName];
+    if (value === undefined) {
+      if (defaultValue === undefined) {
+        throw new Error(`Missing parameter '${paramName}'`);
+      }
+      return defaultValue;
     }
-    return defaultValue;
+    return value;
   }
-  return value;
+
+  /*%loadParameters%*/
+
+  run(/*%paramInvokes%*/);
 }
 
-/*%loadParameters%*/
-
-run(/*%paramInvokes%*/);
+export { run, QualifiedName, Field, SourceRecord };
