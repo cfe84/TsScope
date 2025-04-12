@@ -18,7 +18,7 @@ export interface IImportSource<T> {
  * "Custom" code is inserted lower down.
  */
 
-function createStream(/*%paramSignatures%*/) {
+function createStream(minimumAge: string) {
   ///////////////////////////////////////////////
   //                                           //
   //             Start boilerplate             //
@@ -494,9 +494,18 @@ function createStream(/*%paramSignatures%*/) {
   // This is where your script code starts.
 
   /*%params%*/
-  /*%recordMappers%*/
-  /*%conditions%*/
-  /*%statements%*/
+  
+  
+  
+const SOURCE__users_0 = new ImportSource<usersRecord>();
+const SOURCE__users_above_age_0 = new NamedSource(new SelectQuerySource(SOURCE__users_0, new StarRecordMapper(), (record: any) => {
+    record = recordToObject(record);
+    Object.assign(globalThis, record);
+    const res = // Condition must be on new line to accomodate for the tsIgnore flag
+        age > Number.parseInt(minimumAge)
+    return res;
+}), "users_above_age");
+const EXPORT_users_above_age = new ExportSink(SOURCE__users_above_age_0);
 
   ///////////////////////////////////////////////
   //                                           //
@@ -511,11 +520,16 @@ function createStream(/*%paramSignatures%*/) {
 
   return {
     start,
-    /*%exports%*/
+    users: SOURCE__users_0 as IImportSource<any>,
+    users_above_age: EXPORT_users_above_age as IExportSink
   };
 }
 
-/*%interfaceTypes%*/
+interface usersRecord {
+  name: string;
+  age: number;
+}
+
 
 // TODO: This should be checked if using import -> shouldn't be allowed.
 const isUsedAsExecutable = process.argv[1] === __filename;
@@ -532,9 +546,9 @@ if (isUsedAsExecutable) {
     return value;
   }
 
-  /*%loadParameters%*/
+  const minimumAge = loadParameter("minimumAge", undefined);
 
-  const obj = createStream(/*%paramInvokes%*/);
+  const obj = createStream(minimumAge);
   obj.start();
 }
 

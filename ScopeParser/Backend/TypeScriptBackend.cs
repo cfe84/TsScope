@@ -1,6 +1,7 @@
 namespace ScopeParser.Backend;
 
 using System.ComponentModel;
+using System.Runtime.ConstrainedExecution;
 using System.Text.RegularExpressions;
 using Microsoft.VisualBasic;
 using ScopeParser.Ast;
@@ -16,7 +17,10 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     private List<string> parameterSignatures = new();
     private List<string> conditions = new();
     private List<string> recordMappers = new();
+    private List<string> interfaceTypes = new();
+    private List<string> exports = new();
     private int outputCount = 0;
+    private int exportCount = 0;
     private int recordMapperCount = 0;
 
     public string VisitScript(Script node)
@@ -24,6 +28,9 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         var statements = node.Statements.Select(Visit).ToList();
         var conditionsStr = string.Join("\n", conditions);
         var recordMappersStr = string.Join("\n", recordMappers);
+        var exportsStr = string.Join(",\n    ", exports);
+        var interfaceTypesStr = string.Join("\n", interfaceTypes);
+
         // The main script snippet contains all the boiler plate. Statements are just inserted in its midst
         return snippetProvider.GetSnippet("script",
             ("paramSignatures", string.Join(",\n", parameterSignatures)),
@@ -31,24 +38,32 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
             ("loadParameters", string.Join("\n", parameterLoadValues)),
             ("statements", string.Join("\n", statements)),
             ("conditions", conditionsStr),
-            ("recordMappers", recordMappersStr)
+            ("recordMappers", recordMappersStr),
+            ("exports", exportsStr),
+            ("interfaceTypes", interfaceTypesStr)
         );
+    }
+
+    // We keep track of variable reuse. Variables are renamed variableName_0, variableName_1, etc.
+    // This is to avoid name collisions in the generated code.
+    // Technically we could just reuse the same variable, but this is easier to read.
+    private void incVariableCount(string name)
+    {
+        if (!variableCount.ContainsKey(name))
+        {
+            variableCount[name] = 0;
+        }
+        else
+        {
+            variableCount[name]++;
+        }
     }
 
     public string VisitAssignment(Assignment assignment)
     {
         var source = Visit(assignment.Source);
-        // We keep track of variable reuse. Variables are renamed variableName_0, variableName_1, etc.
-        // This is to avoid name collisions in the generated code.
-        // Technically we could just reuse the same variable, but this is easier to read.
-        if (!variableCount.ContainsKey(assignment.VariableName.Value))
-        {
-            variableCount[assignment.VariableName.Value] = 0;
-        }
-        else
-        {
-            variableCount[assignment.VariableName.Value]++;
-        }
+
+        incVariableCount(assignment.VariableName.Value);
         var variableName = Visit(assignment.VariableName);
         return snippetProvider.GetSnippet("assignment",
             ("variableName", variableName),
@@ -307,16 +322,52 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitExport(Export node)
     {
-        throw new NotImplementedException();
+        var exportName = node.ExportName;
+        if (exportName == null && node.Source is Identifier alias)
+        {
+            exportName = alias.Value;
+        }
+        else
+        {
+            exportName = $"export_{exportCount++}";
+        }
+        var name = $"EXPORT_{exportName}";
+        var source = Visit(node.Source);
+        var exportExport = snippetProvider.GetSnippet("exportExport",
+            ("exportName", exportName),
+            ("name", name)
+        );
+        exports.Add(exportExport);
+        return snippetProvider.GetSnippet("export",
+            ("name", name),
+            ("source", source)
+        );
     }
 
     public string VisitImport(Import node)
     {
-        throw new NotImplementedException();
+        var type = "any";
+        incVariableCount(node.Name.Value);
+        var name = Visit(node.Name);
+        if (node.Fields.Count > 0)
+        {
+            type = $"{node.Name.Value}Record";
+            var fields = string.Join("\n  ", node.Fields.Select(Visit));
+            interfaceTypes.Add(snippetProvider.GetSnippet("importInterface",
+                ("name", type),
+                ("fields", fields)
+            ));
+        }
+        var importExport = snippetProvider.GetSnippet("importExport", ("exportName", node.Name.Value), ("name", name));
+        exports.Add(importExport);
+        return snippetProvider.GetSnippet("importDeclaration", ("name", name), ("type", type));
     }
 
     public string VisitTypedField(TypedField node)
     {
-        throw new NotImplementedException();
+        return snippetProvider.GetSnippet("typedField",
+            ("name", node.Name),
+            ("type", node.Type)
+        );
     }
 }

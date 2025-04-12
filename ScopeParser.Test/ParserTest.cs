@@ -797,10 +797,30 @@ public class ParserTest
         validateIdentifierSource(export.Source, "source_name");
     }
 
+    [Fact]
+    public void TestImportUntyped()
+    {
+        // Given
+        var source = new List<Token?> {
+            fromTokenType(TokenType.Import),
+            new Token(TokenType.Identifier, "source_name", 1, 1),
+            fromTokenType(TokenType.SemiColon),
+            fromTokenType(TokenType.EndOfFile),
+        }.Where(t => t != null).Select(t => t!).ToList();
+
+        // when
+        var parser = new Parser(source);
+        var script = parser.parse();
+
+        // then
+        validateScript(parser, script, 1);
+        var import = validateImport(script.Statements[0], "source_name", 0);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void TestImport(bool extraComma)
+    public void TestImportTyped(bool extraComma)
     {
         // Given
         var source = new List<Token?> {
@@ -1046,7 +1066,7 @@ public class ParserTest
     {
         statement.Should().BeOfType<Import>();
         var import = (Import)statement;
-        import.Name.Should().Be(expectedName);
+        validateIdentifier(import.Name, expectedName);
         import.Fields.Should().HaveCount(fieldCount);
         return import;
     }

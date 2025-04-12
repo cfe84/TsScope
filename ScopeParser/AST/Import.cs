@@ -6,7 +6,7 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class Import(Token token, string name, List<TypedField> fields) : Statement {
+public class Import(Token token, Identifier name, List<TypedField> fields) : Statement {
       
     public T Visit<T>(INodeVisitor<T> visitor)
     {
@@ -15,7 +15,7 @@ public class Import(Token token, string name, List<TypedField> fields) : Stateme
 
     public Token Token => token;
       
-    public string Name => name;
+    public Identifier Name => name;
 
     public List<TypedField> Fields => fields;
 }

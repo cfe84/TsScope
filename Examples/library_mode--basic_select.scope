@@ -1,6 +1,9 @@
-PARAM minimumAge; // Todo: I should really have types for PARAM. : number = 30;
+PARAM @minimumAge; // Todo: I should really have types for PARAM. : number = 30;
 
-IMPORT users; // Todo: I should also have types for inputs { name: string, age: number };
+IMPORT users {
+    name: string,
+    age: number,
+};
 
 users_above_age = SELECT * FROM users WHERE {{ age > Number.parseInt(minimumAge) }};
 

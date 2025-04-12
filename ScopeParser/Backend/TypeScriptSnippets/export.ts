@@ -1,0 +1,1 @@
+const __name__ = new ExportSink(__source__);

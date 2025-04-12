@@ -14,7 +14,7 @@ function run() {
     "FieldList": ["Field[] fields"],
     "FileSource": ["FieldSpec fieldSpec", "StringValue fileName"],
     "Identifier": ["string value"],
-    "Import": ["string name", "List<TypedField> fields"],
+    "Import": ["Identifier name", "List<TypedField> fields"],
     "JoinQuery": ["SelectSource left", "AliasableSource right", "JoinType joinType", "TsExpression condition"],
     "NumberLiteral": ["decimal value"], // since we output TS we only need number
     "Output": ["Source source", "StringValue outputFile"],

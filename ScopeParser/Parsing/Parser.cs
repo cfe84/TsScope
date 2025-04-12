@@ -228,29 +228,33 @@ namespace ScopeParser.Parsing
         }
 
         /// <summary>
-        /// <IMPORT> = "IMPORT" <IDENTIFIER> "{" <TYPED_FIELD_LIST> "}"
+        /// <IMPORT> = "IMPORT" <IDENTIFIER> [ "{" <TYPED_FIELD_LIST> "}" ]
         public Import? parseImport()
         {
             if (match(TokenType.Import))
             {
                 var token = previous();
                 var name = parseIdentifier(true)!;
-                expect(TokenType.LBracket, "{");
                 var fields = new List<TypedField>();
-                while (!nextIs(TokenType.RBracket))
+                if (nextIs(TokenType.LBracket))
                 {
-                    if (match(TokenType.Comma))
+                    next();
+                    while (!nextIs(TokenType.RBracket))
                     {
-                        // Just ignore commas. That technically makes them optional.
-                        continue;
+                        if (match(TokenType.Comma))
+                        {
+                            // Just ignore commas. That technically makes them optional.
+                            continue;
+                        }
+                        var field = parseTypedField();
+                        if (field == null)
+                            continue;
+                        fields.Add(field);
                     }
-                    var field = parseTypedField();
-                    if (field == null)
-                        continue;
-                    fields.Add(field);
+                    next();
                 }
-                next();
-                return new Import(token, name.Value, fields);
+
+                return new Import(token, name, fields);
             }
             return null;
         }
