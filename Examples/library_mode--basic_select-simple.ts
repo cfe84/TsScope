@@ -1,6 +1,9 @@
-import { createStream } from "./compiled/library_mode--basic_select.ts";
+import {
+  createAsyncProcessor,
+  UsersRecord,
+} from "./compiled/library_mode--basic_select.ts";
 
-const users = [
+const users: UsersRecord[] = [
   { name: "Rebecca", age: 30 },
   { name: "Ethan", age: 25 },
   { name: "Olivia", age: 35 },
@@ -14,8 +17,12 @@ const users = [
   { name: "Amelia", age: 24 },
 ];
 
-// Async processor takes parameters as an array,
-// and returns results as an array.
-const processorAsync = createAsyncProcessor(30);
-const result = await processorAsync({ users });
-console.log(result);
+async function runAsync() {
+  // Async processor takes parameters as an array,
+  // and returns results as an array.
+  const processorAsync = createAsyncProcessor(30);
+  const result = await processorAsync(users);
+  console.log(result);
+}
+
+runAsync().then();

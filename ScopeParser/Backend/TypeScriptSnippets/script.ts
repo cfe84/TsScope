@@ -471,6 +471,7 @@ function createStream(/*%paramSignatures%*/) {
     close(): void {}
 
     addEventHandlers(
+      // TODO: handle typing
       recordHandler: (record: any) => void,
       doneHandler?: () => void
     ) {
@@ -521,4 +522,22 @@ const isUsedAsExecutable = process.argv[1] === __filename;
 
 /*%useAsExecutable%*/
 
-export { createStream };
+function createAsyncProcessor(/*%paramSignatures%*/) {
+  return function (/*%importSimpleParams%*/) {
+    return new Promise((resolve) => {
+      const stream = createStream(/*%paramInvokes%*/);
+      let done = 0;
+      function returnIfDone() {
+        if (++done === __exportCount__) {
+          resolve({
+/*%exportSimpleResults%*/
+          });
+        }
+      }
+/*%exportAddEventHandlers%*/
+/*%importSendAllRecords%*/
+    });
+  };
+}
+
+export { createStream, createAsyncProcessor };

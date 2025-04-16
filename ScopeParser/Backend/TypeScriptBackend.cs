@@ -17,8 +17,12 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     private List<string> parameterSignatures = new();
     private List<string> conditions = new();
     private List<string> recordMappers = new();
+    private List<string> importSendAllRecords = new();
+    private List<string> importSimpleParameters = new();
     private List<string> interfaceTypes = new();
     private List<string> exports = new();
+    private List<string> exportEventHandlers = new();
+    private List<string> exportSimpleResults = new();
     private int outputCount = 0;
     private int exportCount = 0;
     private int recordMapperCount = 0;
@@ -26,22 +30,37 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
 
     public string VisitScript(Script node)
     {
-        var statements = node.Statements.Select(Visit).ToList();
+        // We need to visit the script first to get all the variables
+        var statementsStr = string.Join("\n", node.Statements.Select(Visit).ToList());
+
+        // Then assemble the rest
         var conditionsStr = string.Join("\n", conditions);
-        var recordMappersStr = string.Join("\n", recordMappers);
         var exportsStr = string.Join(",\n    ", exports);
+        var exportAddEventHandlersStr = string.Join("\n", exportEventHandlers);
+        var exportSimpleResultsStr = string.Join("\n", exportSimpleResults);
+        var importSendAllRecordsStr = string.Join("\n", importSendAllRecords);
+        var importSimpleParametersStr = string.Join(", ", importSimpleParameters);
         var interfaceTypesStr = string.Join("\n", interfaceTypes);
+        var parameterSignaturesStr = string.Join(",\n", parameterSignatures);
+        var paramInvokesStr = string.Join(",\n", parameterInvokes);
+        var recordMappersStr = string.Join("\n", recordMappers);
         var useAsExecutable = HandleUseAsExecutable();
 
         // The main script snippet contains all the boiler plate. Statements are just inserted in its midst
         return snippetProvider.GetSnippet("script",
-            ("paramSignatures", string.Join(",\n", parameterSignatures)),
-            ("statements", string.Join("\n", statements)),
             ("conditions", conditionsStr),
-            ("recordMappers", recordMappersStr),
             ("exports", exportsStr),
-            ("useAsExecutable", useAsExecutable),
-            ("interfaceTypes", interfaceTypesStr)
+            ("exportAddEventHandlers", exportAddEventHandlersStr),
+            ("exportCount", exportSimpleResults.Count().ToString()),
+            ("exportSimpleResults", exportSimpleResultsStr),
+            ("importSendAllRecords", importSendAllRecordsStr),
+            ("importSimpleParams", importSimpleParametersStr),
+            ("interfaceTypes", interfaceTypesStr),
+            ("paramInvokes", paramInvokesStr),
+            ("paramSignatures", parameterSignaturesStr),
+            ("recordMappers", recordMappersStr),
+            ("statements", statementsStr),
+            ("useAsExecutable", useAsExecutable)
         );
     }
 
@@ -353,6 +372,10 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
             ("name", name)
         );
         exports.Add(exportExport);
+        var exportAddEventHandlers = snippetProvider.GetSnippet("exportAddEventHandlers", ("name", exportName));
+        exportEventHandlers.Add(exportAddEventHandlers);
+        var exportSimpleResult = snippetProvider.GetSnippet("exportSimpleResult", ("name", exportName));
+        exportSimpleResults.Add(exportSimpleResult);
         return snippetProvider.GetSnippet("export",
             ("name", name),
             ("source", source)
@@ -367,6 +390,7 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         if (node.Fields.Count > 0)
         {
             type = $"{node.Name.Value}Record";
+            type = type[0].ToString().ToUpper() + type[1..];
             var fields = string.Join("\n  ", node.Fields.Select(Visit));
             interfaceTypes.Add(snippetProvider.GetSnippet("importInterface",
                 ("name", type),
@@ -374,8 +398,14 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
             ));
         }
         isUsingImport = true;
+        var parameterName = node.Name.Value == "stream" ? "inputStream" : node.Name.Value; // Rename variable to avoid collision if necessary
+
         var importExport = snippetProvider.GetSnippet("importExport", ("exportName", node.Name.Value), ("name", name));
         exports.Add(importExport);
+        var importSendAllRecordsStr = snippetProvider.GetSnippet("importSimpleSendAllRecords", ("name", parameterName));
+        importSendAllRecords.Add(importSendAllRecordsStr);
+        var importSimpleParametersStr = snippetProvider.GetSnippet("importSimpleParameters", ("name", parameterName), ("type", type));
+        importSimpleParameters.Add(importSimpleParametersStr);
         return snippetProvider.GetSnippet("importDeclaration", ("name", name), ("type", type));
     }
 

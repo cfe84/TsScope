@@ -68,6 +68,7 @@ function createStream(minimumAge: string) {
     }
   }
 
+  // TODO: Reduce the clutter for features that are not used.
   class StarRecordMapper extends RecordMapper {
     mapRecord = (record: SourceRecord) => record;
     mapHeaders = (fields: QualifiedName[]): QualifiedName[] =>
@@ -198,7 +199,8 @@ function createStream(minimumAge: string) {
           name: field,
           namespace: undefined,
         }));
-        this.sendSchema(this.fields);
+        const headers = this.recordMapper.mapHeaders(this.fields);
+        this.sendSchema(headers);
       } else {
         const thisRecord = valuesInLine.map((value, i) => ({
           name: this.fields[i],
@@ -469,6 +471,7 @@ function createStream(minimumAge: string) {
     close(): void {}
 
     addEventHandlers(
+      // TODO: handle typing
       recordHandler: (record: any) => void,
       doneHandler?: () => void
     ) {
@@ -496,7 +499,7 @@ function createStream(minimumAge: string) {
   
   
   
-const SOURCE__users_0 = new ImportSource<usersRecord>();
+const SOURCE__users_0 = new ImportSource<UsersRecord>();
 const SOURCE__users_above_age_0 = new NamedSource(new SelectQuerySource(SOURCE__users_0, new StarRecordMapper(), (record: any) => {
     record = recordToObject(record);
     Object.assign(globalThis, record);
@@ -524,11 +527,10 @@ const EXPORT_users_above_age = new ExportSink(SOURCE__users_above_age_0);
   };
 }
 
-interface usersRecord {
+export interface UsersRecord {
   name: string;
   age: number;
 }
-
 const isUsedAsExecutable = process.argv[1] === __filename;
 
 if (isUsedAsExecutable) {
@@ -537,4 +539,28 @@ To use this script as an executable, please remove the IMPORT statement.`);
   process.exit(1);
 }
 
-export { createStream };
+function createAsyncProcessor(minimumAge: string) {
+  return function (users: UsersRecord[]) {
+    return new Promise((resolve) => {
+      const stream = createStream(minimumAge);
+      let done = 0;
+      function returnIfDone() {
+        if (++done === 1) {
+          resolve({
+            users_above_age: RES_users_above_age
+          });
+        }
+      }
+      // TODO: handle type.
+      const RES_users_above_age: any[] = [];
+      stream.users_above_age.addEventHandlers(
+        (record) => RES_users_above_age.push(record),
+        returnIfDone
+      );
+      users.forEach(stream.users.send);
+      stream.users.close();
+    });
+  };
+}
+
+export { createStream, createAsyncProcessor };

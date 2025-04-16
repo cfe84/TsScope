@@ -1,3 +1,3 @@
-interface __name__ {
+export interface __name__ {
   /*%fields%*/
 }
