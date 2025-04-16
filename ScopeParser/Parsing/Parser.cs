@@ -210,7 +210,7 @@ namespace ScopeParser.Parsing
 
 
         /// <summary>
-        /// <OUTPUT> = "OUTPUT" <STREAM> "TO" <STRING> // Same, should be STRING_VALUE
+        /// <OUTPUT> = "OUTPUT" <STREAM> "TO" <STRING_VALUE> // Same, should be STRING_VALUE
         /// </summary>
         /// <returns></returns>
         public Output? parseOutput()
@@ -457,7 +457,7 @@ namespace ScopeParser.Parsing
             if (match(TokenType.As))
             {
                 var alias = parseIdentifier(true)!;
-                return new AliasedSource(source.Token, source, alias);
+                return new AliasedSource(source.Token, alias, source);
             }
             return source;
         }
@@ -480,6 +480,7 @@ namespace ScopeParser.Parsing
 
         /// <summary>
         /// <FIELD_SPEC> = "*" | <FIELD_LIST>
+        /// Todo: support *, somefield AS something, { somefield / 2 } AS somethingElse
         /// </summary>
         /// <returns></returns>
         /// <exception cref="ParseError"></exception>

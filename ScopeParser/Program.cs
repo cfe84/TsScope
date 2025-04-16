@@ -93,7 +93,8 @@ class Program
       return;
     }
     string source = File.ReadAllText(input);
-    string? res = run(source);
+    var snippetProvider = new FsSnippetProvider("ScopeParser/Backend/TypeScriptSnippets");
+    string? res = run(source, snippetProvider);
     if (res != null)
     {
       File.WriteAllText(output, res);
@@ -102,11 +103,12 @@ class Program
 
   private static void runREPL()
   {
+    var snippetProvider = new MockSnippetProvider();
     while (true)
     {
       Console.Write("> ");
       string source = Console.ReadLine() ?? "";
-      var res = run(source);
+      var res = run(source, snippetProvider);
       if (res != null)
       {
         Console.WriteLine(res);
@@ -114,7 +116,7 @@ class Program
     }
   }
 
-  private static string? run(string source)
+  private static string? run(string source, ISnippetProvider snippetProvider)
   {
     var lexer = new Lexer(source);
     try
@@ -132,9 +134,16 @@ class Program
       }
       else
       {
-        var snippetProvider = new FsSnippetProvider("ScopeParser/Backend/TypeScriptSnippets");
         var backend = new TypeScriptBackend(snippetProvider);
-        return backend.Visit(script);
+        try
+        {
+          return backend.Visit(script);
+        }
+        catch (Exception e)
+        {
+          Console.Error.WriteLine($"Error during code generation: {e.Message}");
+          return null;
+        }
       }
     }
     catch (LexError e)

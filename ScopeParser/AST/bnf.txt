@@ -1,21 +1,6 @@
-TSScope is a toy implementation of a scope script compiler to Typescript.
+<SCRIPT> ::= (<STATEMENT> ";") * 
 
-# Usage
-
-`ScopeCompiler` runs interactive mode.
-
-`ScopeCompiler script.scope` outputs `script.ts` that can then be ran with `node --import=tsx script.ts`. Additional options can be found using `ScopeCompiler --help`.
-
-The scripts it generates can be imported from other TypeScript sources.
-
-Examples in the `Examples` folder. As of this version, it can support reading and outputting to CSV, selecting, filtering, and inner/outer joins between multiple sources.
-
-This compiler is using this syntax:
-
-```EBNF
-<SCRIPT> ::= (<STATEMENT> ";") *
-
-<STATEMENT> ::=
+<STATEMENT> ::= 
       <ASSIGNMENT>
     | <VARIABLE_DEFINITION>
     | <VARIABLE_ASSIGNMENT>
@@ -26,7 +11,7 @@ This compiler is using this syntax:
 
 <EXPORT> ::= "EXPORT" <SOURCE>  [ "AS" <STRING> ]
 
-<SOURCE> ::=
+<SOURCE> ::= 
       <FILE_SOURCE>
     | <SELECT_QUERY>
     | <IDENTIFIER>
@@ -39,7 +24,7 @@ This compiler is using this syntax:
 
 <TS_EXPRESSION> ::= "{{" <STRING> "}}"
 
-<SELECT_SOURCE> ::=
+<SELECT_SOURCE> ::= 
       <ALIASABLE_SOURCE>
     | <JOIN_QUERY>
 
@@ -47,25 +32,25 @@ This compiler is using this syntax:
 
 <JOIN_TYPE> ::= "INNER" | "LEFT OUTER" | "RIGHT OUTER" | "OUTER"
 
-<ALIASABLE_SOURCE> ::=
+<ALIASABLE_SOURCE> ::= 
       <SOURCE>
     | <ALIASED_SOURCE>
 
 <ALIASED_SOURCE> ::= <IDENTIFIER> "=" <SOURCE>
 
-<FIELD_SPEC> ::=
+<FIELD_SPEC> ::= 
       <FIELD_LIST>
     | <STAR>
 
 <STAR> ::= "*"
 
-<FIELD_LIST> ::= (<FIELD> ",") *
+<FIELD_LIST> ::= (<FIELD> ",") * 
 
-<FIELD> ::=
+<FIELD> ::= 
       <ALIASED_FIELD>
     | <FIELD_VALUE>
 
-<FIELD_VALUE> ::=
+<FIELD_VALUE> ::= 
       <INPUT_FIELD>
     | <TS_EXPRESSION>
     | <STRING_LITERAL>
@@ -84,7 +69,7 @@ This compiler is using this syntax:
 
 <FILE_SOURCE> ::= "EXTRACT" <FIELD_SPEC> "FROM" <STRING_VALUE>
 
-<STRING_VALUE> ::=
+<STRING_VALUE> ::= 
       <STRING_LITERAL>
     | <VARIABLE_IDENTIFIER>
     | <TS_EXPRESSION>
@@ -99,13 +84,13 @@ This compiler is using this syntax:
 
 <PARAM> ::= "PARAM" <STRING> ":" [ <PARAM_DEFAULT_VALUE> ]
 
-<PARAM_DEFAULT_VALUE> ::=
+<PARAM_DEFAULT_VALUE> ::= 
       <STRING_LITERAL>
     | <TS_EXPRESSION>
 
 <VARIABLE_ASSIGNMENT> ::= "@" <STRING> "=" <VARIABLE_VALUE>
 
-<VARIABLE_VALUE> ::=
+<VARIABLE_VALUE> ::= 
       <TS_EXPRESSION>
     | <STRING_LITERAL>
     | <NUMBER_LITERAL>
@@ -115,12 +100,4 @@ This compiler is using this syntax:
 <VARIABLE_DEFINITION> ::= "@" <STRING> ":" <STRING> "=" <VARIABLE_VALUE>
 
 <ASSIGNMENT> ::= <IDENTIFIER> "=" <SOURCE>
-```
 
-# Development
-
-Conditions and filtering are done using Typescript expressions, which are encapsulated using `{  }` for parsing simplicity. Closing brackets within must be escaped using `\}`.
-
-Parser is mostly recursive, except for JOIN conditions, which are left-associative and parsed iteratively.
-
-AST is generated using `node Tools/generateAst.js ./ScopeParser/AST`. It also generates a BNF syntax for the AST it generated.

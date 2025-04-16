@@ -5,7 +5,6 @@ using ScopeParser.Lexing;
 using ScopeParser.Parsing;
 using FluentAssertions;
 using ScopeParser.Ast;
-using Newtonsoft.Json.Schema;
 
 public class ParserTest
 {

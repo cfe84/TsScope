@@ -6,7 +6,7 @@ using ScopeParser.Lexing;
 
 namespace ScopeParser.Ast;
 
-public class AliasedSource(Token token, Source source, Identifier alias) : AliasableSource {
+public class AliasedSource(Token token, Identifier alias, Source source) : AliasableSource {
       
     public T Visit<T>(INodeVisitor<T> visitor)
     {
@@ -15,8 +15,8 @@ public class AliasedSource(Token token, Source source, Identifier alias) : Alias
 
     public Token Token => token;
       
-    public Source Source => source;
-
     public Identifier Alias => alias;
+
+    public Source Source => source;
 }
       
