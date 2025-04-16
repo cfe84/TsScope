@@ -22,6 +22,7 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     private int outputCount = 0;
     private int exportCount = 0;
     private int recordMapperCount = 0;
+    private bool isUsingImport = false;
 
     public string VisitScript(Script node)
     {
@@ -30,18 +31,32 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         var recordMappersStr = string.Join("\n", recordMappers);
         var exportsStr = string.Join(",\n    ", exports);
         var interfaceTypesStr = string.Join("\n", interfaceTypes);
+        var useAsExecutable = HandleUseAsExecutable();
 
         // The main script snippet contains all the boiler plate. Statements are just inserted in its midst
         return snippetProvider.GetSnippet("script",
             ("paramSignatures", string.Join(",\n", parameterSignatures)),
-            ("paramInvokes", string.Join(",\n", parameterInvokes)),
-            ("loadParameters", string.Join("\n", parameterLoadValues)),
             ("statements", string.Join("\n", statements)),
             ("conditions", conditionsStr),
             ("recordMappers", recordMappersStr),
             ("exports", exportsStr),
+            ("useAsExecutable", useAsExecutable),
             ("interfaceTypes", interfaceTypesStr)
         );
+    }
+
+    private string HandleUseAsExecutable()
+    {
+        if (!isUsingImport)
+        {
+            var loadParametersStr = string.Join(",\n", parameterLoadValues);
+            var paramInvokesStr = string.Join(",\n", parameterInvokes);
+            return snippetProvider.GetSnippet("useAsExecutable",
+                ("paramInvokes", paramInvokesStr),
+                ("loadParameters", loadParametersStr)
+            );
+        }
+        return snippetProvider.GetSnippet("blockUseAsExecutable");
     }
 
     // We keep track of variable reuse. Variables are renamed variableName_0, variableName_1, etc.
@@ -358,6 +373,7 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
                 ("fields", fields)
             ));
         }
+        isUsingImport = true;
         var importExport = snippetProvider.GetSnippet("importExport", ("exportName", node.Name.Value), ("name", name));
         exports.Add(importExport);
         return snippetProvider.GetSnippet("importDeclaration", ("name", name), ("type", type));

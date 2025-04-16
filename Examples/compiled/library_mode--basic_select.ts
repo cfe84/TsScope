@@ -493,7 +493,6 @@ function createStream(minimumAge: string) {
 
   // This is where your script code starts.
 
-  /*%params%*/
   
   
   
@@ -530,26 +529,12 @@ interface usersRecord {
   age: number;
 }
 
-
-// TODO: This should be checked if using import -> shouldn't be allowed.
 const isUsedAsExecutable = process.argv[1] === __filename;
 
 if (isUsedAsExecutable) {
-  function loadParameter(paramName: string, defaultValue?: string): string {
-    const value = process.env[paramName];
-    if (value === undefined) {
-      if (defaultValue === undefined) {
-        throw new Error(`Missing parameter '${paramName}'`);
-      }
-      return defaultValue;
-    }
-    return value;
-  }
-
-  const minimumAge = loadParameter("minimumAge", undefined);
-
-  const obj = createStream(minimumAge);
-  obj.start();
+  console.error(`Error: this script contains an IMPORT statement, and as such can only be used in library mode.
+To use this script as an executable, please remove the IMPORT statement.`);
+  process.exit(1);
 }
 
 export { createStream };
