@@ -76,7 +76,7 @@
 
 <VARIABLE_IDENTIFIER> ::= "@" <STRING>
 
-<IMPORT> ::= "IMPORT" <IDENTIFIER> "{" <TYPED_FIELD> "}"
+<IMPORT> ::= "IMPORT" <IDENTIFIER> "{" (<TYPED_FIELD> ",") *  "}"
 
 <TYPED_FIELD> ::= <STRING> ":" <STRING>
 

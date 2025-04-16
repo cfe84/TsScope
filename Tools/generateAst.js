@@ -39,7 +39,7 @@ function run() {
     "FieldList": ["Field[] fields", keyword(",", "with previous")],
     "FileSource": [keyword("EXTRACT"), "FieldSpec fieldSpec", keyword("FROM"), "StringValue fileName"],
     "Identifier": ["string value"],
-    "Import": [keyword("IMPORT"), "Identifier name", keyword("{"), "List<TypedField> fields", keyword("}")], // TODO: fix
+    "Import": [keyword("IMPORT"), "Identifier name", keyword("{"), "List<TypedField> fields", keyword(",", "with previous"), keyword("}")], // TODO: fix
     "JoinQuery": ["SelectSource left", "AliasableSource right", "JoinType joinType", keyword("ON"), "TsExpression condition"],
     "NumberLiteral": ["decimal value"], // since we output TS we only need number
     "Output": [keyword("OUTPUT"), "Source source", keyword("TO"), "StringValue outputFile"],
@@ -278,7 +278,7 @@ function formatType(type, addBefore = "", addAfter = "") {
 
   if (addBefore) addBefore = `${addBefore} `;
   if (addAfter) addAfter = ` ${addAfter}`;
-  const isMultiple = type.indexOf('[') >= 0;
+  const isMultiple = type.indexOf('[') >= 0 || type.startsWith("List");
 
   if (isMultiple) {
     if (addBefore || addAfter) {
