@@ -1,12 +1,24 @@
 import * as fs from "fs";
 import * as path from "path";
 
+export interface IExportSink {
+  addEventHandlers(
+    recordHandler: (record: any) => void,
+    doneHandler?: () => void
+  ): void;
+}
+
+export interface IImportSource<T> {
+  send(record: T);
+  close();
+}
+
 /*************
  * The following code is a boilerplate for the script.
  * "Custom" code is inserted lower down.
  */
 
-function run() {
+function createStream() {
   ///////////////////////////////////////////////
   //                                           //
   //             Start boilerplate             //
@@ -23,13 +35,7 @@ function run() {
     value: any;
   }
 
-  interface FieldsSpec {
-    fieldFilter: (field: QualifiedName) => boolean;
-    missingFields: (field: QualifiedName[]) => {
-      result: string[];
-      position: string;
-    };
-  }
+  type SourceRecord = Field[];
 
   abstract class RecordMapper {
     abstract mapRecord(record: SourceRecord): SourceRecord;
@@ -62,20 +68,27 @@ function run() {
     }
   }
 
+  // TODO: Reduce the clutter for features that are not used.
   class StarRecordMapper extends RecordMapper {
     mapRecord = (record: SourceRecord) => record;
-    mapHeaders = (fields: QualifiedName[]): QualifiedName[] => fields;
+    mapHeaders = (fields: QualifiedName[]): QualifiedName[] =>
+      fields.map((field) => ({
+        name: field.name,
+      }));
   }
 
-  type SourceRecord = Field[];
-
-  function recordToObject(record: SourceRecord): { [key: string]: any } {
+  function recordToObject(
+    record: SourceRecord,
+    addNamespace = true
+  ): { [key: string]: any } {
     const obj: { [key: string]: any } = {};
-    // We give precedence to namespaces. If a field is conflicting
-    // with a namespace, it should be ignored.
-    for (const field of record) {
-      if (field.name.namespace && !(field.name.namespace in obj)) {
-        obj[field.name.namespace] = {};
+    if (addNamespace) {
+      // We give precedence to namespaces. If a field is conflicting
+      // with a namespace, it should be ignored.
+      for (const field of record) {
+        if (field.name.namespace && !(field.name.namespace in obj)) {
+          obj[field.name.namespace] = {};
+        }
       }
     }
 
@@ -88,16 +101,19 @@ function run() {
         // TODO: Handle conflicts better.
       }
     }
-    // Assign to namespace if typed.
-    for (const field of record) {
-      if (field.name.namespace) {
-        obj[field.name.namespace][field.name.name] = field.value;
+    if (addNamespace) {
+      // Assign to namespace if typed.
+      for (const field of record) {
+        if (field.name.namespace) {
+          obj[field.name.namespace][field.name.name] = field.value;
+        }
       }
     }
     return obj;
   }
 
   interface IConsumer {
+    receiveSchema(source: Source, schema: QualifiedName[]): void;
     receiveRecord(source: Source, record: SourceRecord): void;
     done(source: Source): void;
   }
@@ -112,13 +128,14 @@ function run() {
     private static sourceCount = 0;
     private consumers: IConsumer[] = [];
 
-    private _id: string = (Source.sourceCount++).toString();
-    public get id(): string {
-      return this._id;
+    public registerConsumer(consumer: IConsumer): void {
+      this.consumers.push(consumer);
     }
 
-    registerConsumer(consumer: IConsumer): void {
-      this.consumers.push(consumer);
+    protected sendSchema(schema: QualifiedName[]): void {
+      this.consumers.forEach((consumer) =>
+        consumer.receiveSchema(this, schema)
+      );
     }
 
     protected notifyConsumers(record: SourceRecord): void {
@@ -182,6 +199,8 @@ function run() {
           name: field,
           namespace: undefined,
         }));
+        const headers = this.recordMapper.mapHeaders(this.fields);
+        this.sendSchema(headers);
       } else {
         const thisRecord = valuesInLine.map((value, i) => ({
           name: this.fields[i],
@@ -205,6 +224,11 @@ function run() {
       source.registerConsumer(this);
     }
 
+    receiveSchema(source: Source, schema: QualifiedName[]): void {
+      const headers = this.recordMapper.mapHeaders(schema);
+      this.sendSchema(headers);
+    }
+
     receiveRecord(_: Source, record: SourceRecord): void {
       if (this.where && !this.where(record)) {
         return;
@@ -220,6 +244,15 @@ function run() {
     constructor(private source: Source, private name: string) {
       super();
       source.registerConsumer(this);
+    }
+
+    receiveSchema(source: Source, schema: QualifiedName[]): void {
+      this.sendSchema(
+        schema.map((field) => ({
+          name: field.name,
+          namespace: this.name,
+        }))
+      );
     }
 
     receiveRecord(_: Source, record: SourceRecord): void {
@@ -277,6 +310,8 @@ function run() {
       if (source === this.right) {
         this.rightSchema = schema;
       }
+      const fullSchema = [...this.leftSchema, ...this.rightSchema];
+      this.sendSchema(fullSchema);
     }
 
     override done(source: Source): void {
@@ -285,6 +320,9 @@ function run() {
       } else if (source === this.right) {
         this.rightDone = true;
       }
+      // Todo: There's probably a smarter way to do that.
+      // We only need one of the joins to be done before we
+      // can start matching the rest of the incomings.
       if (this.leftDone && this.rightDone) {
         this.start();
       }
@@ -350,9 +388,11 @@ function run() {
   }
 
   class FileOutput implements IConsumer, IClosableOutput {
-    private wroteHeader: boolean = false;
-
     constructor(private filePath: string) {}
+
+    receiveSchema(_: Source, schema: QualifiedName[]): void {
+      this.writeHeader(schema);
+    }
 
     done(source: Source): void {
       this.close();
@@ -369,21 +409,13 @@ function run() {
     }
 
     receiveRecord(_: Source, record: SourceRecord): void {
-      if (!this.wroteHeader) {
-        this.writeHeader(
-          _,
-          record.map((field) => field.name)
-        );
-      }
-
       fs.appendFileSync(
         this.filePath,
         record.map((field) => this.fieldToString(field.value)).join(",") + "\n"
       );
     }
 
-    private writeHeader(_: Source, schema: QualifiedName[]): void {
-      this.wroteHeader = true;
+    private writeHeader(schema: QualifiedName[]): void {
       fs.writeFileSync(
         this.filePath,
         schema
@@ -393,6 +425,63 @@ function run() {
     }
 
     close(): void {}
+  }
+
+  class ImportSource<T> extends Source implements IImportSource<T> {
+    constructor() {
+      super();
+      this.send = this.send.bind(this);
+      this.close = this.close.bind(this);
+    }
+
+    send(record: T) {
+      const sourceRecord = Object.entries(record as any).map(
+        ([key, value]) => ({
+          name: { name: key },
+          value,
+        })
+      );
+      this.notifyConsumers(sourceRecord);
+    }
+
+    close() {
+      this.notifyConsumersDone();
+    }
+  }
+
+  class ExportSink implements IConsumer, IClosableOutput, IExportSink {
+    constructor(private source: Source) {
+      this.addEventHandlers = this.addEventHandlers.bind(this);
+      this.source.registerConsumer(this);
+      closableOutputs.push(this);
+    }
+
+    receiveSchema(source: Source, schema: QualifiedName[]): void {}
+
+    receiveRecord(source: Source, record: SourceRecord): void {
+      this.onRecord.forEach((callback) =>
+        callback(recordToObject(record, false))
+      );
+    }
+
+    done(source: Source): void {
+      this.onDone.forEach((callback) => callback());
+    }
+
+    close(): void {}
+
+    addEventHandlers(
+      recordHandler: (record: any) => void,
+      doneHandler?: () => void
+    ) {
+      this.onRecord.push(recordHandler);
+      if (doneHandler) {
+        this.onDone.push(doneHandler);
+      }
+    }
+
+    onRecord: ((record: any) => void)[] = [];
+    onDone: (() => void)[] = [];
   }
 
   const startable: IStartable[] = [];
@@ -406,39 +495,38 @@ function run() {
 
   // This is where your script code starts.
 
-  /*%params%*/
   class RecordMapper_0 extends RecordMapper {
   mapRecord(record: SourceRecord): SourceRecord {
     Object.assign(globalThis, recordToObject(record));
     return [
       {
-    name: {
-        namespace: undefined,
-        name: "id",
-    },
-    value: this.findField(record, undefined, "id"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "name",
-    },
-    value: this.findField(record, undefined, "firstName"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "roleId",
-    },
-    value: this.findField(record, undefined, "roleId"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "age",
-    },
-    value: this.findField(record, undefined, "age"),
-}
+        name: {
+          namespace: undefined,
+          name: "id",
+        },
+        value: this.findField(record, undefined, "id"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "name",
+        },
+        value: this.findField(record, undefined, "firstName"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "roleId",
+        },
+        value: this.findField(record, undefined, "roleId"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "age",
+        },
+        value: this.findField(record, undefined, "age"),
+      }
     ];
   }
 
@@ -446,25 +534,31 @@ function run() {
     const res: QualifiedName[] = [];
   
     // id
-// Find a header with only the name
-let header_0_n = headers.find(header => header.name === "id");
-if (header_0_n) {
-    res.push(header_0_n);
-}
-// Alias field: name
-res.push({ name: "name" });
-// roleId
-// Find a header with only the name
-let header_2_n = headers.find(header => header.name === "roleId");
-if (header_2_n) {
-    res.push(header_2_n);
-}
-// age
-// Find a header with only the name
-let header_3_n = headers.find(header => header.name === "age");
-if (header_3_n) {
-    res.push(header_3_n);
-}
+    // Find a header with only the name
+    let header_0_n = headers.find(header => header.name === "id");
+    if (header_0_n) {
+      res.push(header_0_n);
+    } else {
+      throw new Error(`Header not found: id. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+    // Alias field: name
+    res.push({ name: "name" });
+    // roleId
+    // Find a header with only the name
+    let header_2_n = headers.find(header => header.name === "roleId");
+    if (header_2_n) {
+      res.push(header_2_n);
+    } else {
+      throw new Error(`Header not found: roleId. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+    // age
+    // Find a header with only the name
+    let header_3_n = headers.find(header => header.name === "age");
+    if (header_3_n) {
+      res.push(header_3_n);
+    } else {
+      throw new Error(`Header not found: age. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
 
     return res;
   }
@@ -475,33 +569,33 @@ class RecordMapper_1 extends RecordMapper {
     Object.assign(globalThis, recordToObject(record));
     return [
       {
-    name: {
-        namespace: undefined,
-        name: "id",
-    },
-    value: this.findField(record, undefined, "id"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "name",
-    },
-    value: this.findField(record, undefined, "name"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "anotherCopyOfName",
-    },
-    value: this.findField(record, undefined, "name"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "age",
-    },
-    value: this.findField(record, undefined, "age"),
-}
+        name: {
+          namespace: undefined,
+          name: "id",
+        },
+        value: this.findField(record, undefined, "id"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "name",
+        },
+        value: this.findField(record, undefined, "name"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "anotherCopyOfName",
+        },
+        value: this.findField(record, undefined, "name"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "age",
+        },
+        value: this.findField(record, undefined, "age"),
+      }
     ];
   }
 
@@ -509,25 +603,31 @@ class RecordMapper_1 extends RecordMapper {
     const res: QualifiedName[] = [];
   
     // id
-// Find a header with only the name
-let header_0_n = headers.find(header => header.name === "id");
-if (header_0_n) {
-    res.push(header_0_n);
-}
-// name
-// Find a header with only the name
-let header_1_n = headers.find(header => header.name === "name");
-if (header_1_n) {
-    res.push(header_1_n);
-}
-// Alias field: anotherCopyOfName
-res.push({ name: "anotherCopyOfName" });
-// age
-// Find a header with only the name
-let header_3_n = headers.find(header => header.name === "age");
-if (header_3_n) {
-    res.push(header_3_n);
-}
+    // Find a header with only the name
+    let header_0_n = headers.find(header => header.name === "id");
+    if (header_0_n) {
+      res.push(header_0_n);
+    } else {
+      throw new Error(`Header not found: id. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+    // name
+    // Find a header with only the name
+    let header_1_n = headers.find(header => header.name === "name");
+    if (header_1_n) {
+      res.push(header_1_n);
+    } else {
+      throw new Error(`Header not found: name. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+    // Alias field: anotherCopyOfName
+    res.push({ name: "anotherCopyOfName" });
+    // age
+    // Find a header with only the name
+    let header_3_n = headers.find(header => header.name === "age");
+    if (header_3_n) {
+      res.push(header_3_n);
+    } else {
+      throw new Error(`Header not found: age. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
 
     return res;
   }
@@ -538,19 +638,19 @@ class RecordMapper_2 extends RecordMapper {
     Object.assign(globalThis, recordToObject(record));
     return [
       {
-    name: {
-        namespace: undefined,
-        name: "id",
-    },
-    value: this.findField(record, undefined, "id"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "name",
-    },
-    value: this.findField(record, undefined, "name"),
-}
+        name: {
+          namespace: undefined,
+          name: "id",
+        },
+        value: this.findField(record, undefined, "id"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "name",
+        },
+        value: this.findField(record, undefined, "name"),
+      }
     ];
   }
 
@@ -558,17 +658,21 @@ class RecordMapper_2 extends RecordMapper {
     const res: QualifiedName[] = [];
   
     // id
-// Find a header with only the name
-let header_0_n = headers.find(header => header.name === "id");
-if (header_0_n) {
-    res.push(header_0_n);
-}
-// name
-// Find a header with only the name
-let header_1_n = headers.find(header => header.name === "name");
-if (header_1_n) {
-    res.push(header_1_n);
-}
+    // Find a header with only the name
+    let header_0_n = headers.find(header => header.name === "id");
+    if (header_0_n) {
+      res.push(header_0_n);
+    } else {
+      throw new Error(`Header not found: id. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+    // name
+    // Find a header with only the name
+    let header_1_n = headers.find(header => header.name === "name");
+    if (header_1_n) {
+      res.push(header_1_n);
+    } else {
+      throw new Error(`Header not found: name. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
 
     return res;
   }
@@ -579,26 +683,26 @@ class RecordMapper_3 extends RecordMapper {
     Object.assign(globalThis, recordToObject(record));
     return [
       {
-    name: {
-        namespace: undefined,
-        name: "someId",
-    },
-    value: this.findField(record, undefined, "id"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "someName",
-    },
-    value: this.findField(record, undefined, "name"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "anotherAge",
-    },
-    value: this.findField(record, undefined, "age"),
-}
+        name: {
+          namespace: undefined,
+          name: "someId",
+        },
+        value: this.findField(record, undefined, "id"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "someName",
+        },
+        value: this.findField(record, undefined, "name"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "anotherAge",
+        },
+        value: this.findField(record, undefined, "age"),
+      }
     ];
   }
 
@@ -606,11 +710,11 @@ class RecordMapper_3 extends RecordMapper {
     const res: QualifiedName[] = [];
   
     // Alias field: someId
-res.push({ name: "someId" });
-// Alias field: someName
-res.push({ name: "someName" });
-// Alias field: anotherAge
-res.push({ name: "anotherAge" });
+    res.push({ name: "someId" });
+    // Alias field: someName
+    res.push({ name: "someName" });
+    // Alias field: anotherAge
+    res.push({ name: "anotherAge" });
 
     return res;
   }
@@ -619,6 +723,9 @@ res.push({ name: "anotherAge" });
   
   const SOURCE__input_0 = new NamedSource(new FileSource("inputs/users.csv", new RecordMapper_0()), "input");
 const SOURCE__fields_0 = new NamedSource(new SelectQuerySource(SOURCE__input_0, new RecordMapper_1(), undefined), "fields");
+const OUTPUT_FILE__0 = new FileOutput("outputs/select--alias.csv");
+SOURCE__fields_0.registerConsumer(OUTPUT_FILE__0);
+
 const SOURCE__where_0 = new NamedSource(new SelectQuerySource(SOURCE__fields_0, new RecordMapper_2(), (record: any) => {
     record = recordToObject(record);
     Object.assign(globalThis, record);
@@ -626,9 +733,6 @@ const SOURCE__where_0 = new NamedSource(new SelectQuerySource(SOURCE__fields_0, 
         fields.age >= 30
     return res;
 }), "where");
-const OUTPUT_FILE__0 = new FileOutput("outputs/select--alias.csv");
-SOURCE__fields_0.registerConsumer(OUTPUT_FILE__0);
-
 const OUTPUT_FILE__1 = new FileOutput("outputs/select--alias_where.csv");
 SOURCE__where_0.registerConsumer(OUTPUT_FILE__1);
 
@@ -648,23 +752,36 @@ new SelectQuerySource(SOURCE__fields_0, new RecordMapper_3(), (record: any) => {
   //                                           //
   ///////////////////////////////////////////////
 
-  startable.forEach((source) => source.start());
-  closableOutputs.forEach((output) => output.close());
-
-  /*%exports%*/
-}
-
-function loadParameter(paramName: string, defaultValue?: string): string {
-  const value = process.env[paramName];
-  if (value === undefined) {
-    if (defaultValue === undefined) {
-      throw new Error(`Missing parameter '${paramName}'`);
-    }
-    return defaultValue;
+  function start() {
+    startable.forEach((source) => source.start());
+    closableOutputs.forEach((output) => output.close());
   }
-  return value;
+
+  return {
+    start,
+    
+  };
 }
 
 
+const isUsedAsExecutable = process.argv[1] === __filename;
 
-run();
+if (isUsedAsExecutable) {
+  function loadParameter(paramName: string, defaultValue?: string): string {
+    const value = process.env[paramName];
+    if (value === undefined) {
+      if (defaultValue === undefined) {
+        throw new Error(`Missing parameter '${paramName}'`);
+      }
+      return defaultValue;
+    }
+    return value;
+  }
+
+  
+
+  const obj = createStream();
+  obj.start();
+}
+
+export { createStream };

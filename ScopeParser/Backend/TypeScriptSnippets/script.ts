@@ -68,6 +68,7 @@ function createStream(/*%paramSignatures%*/) {
     }
   }
 
+  // TODO: Reduce the clutter for features that are not used.
   class StarRecordMapper extends RecordMapper {
     mapRecord = (record: SourceRecord) => record;
     mapHeaders = (fields: QualifiedName[]): QualifiedName[] =>
@@ -198,7 +199,8 @@ function createStream(/*%paramSignatures%*/) {
           name: field,
           namespace: undefined,
         }));
-        this.sendSchema(this.fields);
+        const headers = this.recordMapper.mapHeaders(this.fields);
+        this.sendSchema(headers);
       } else {
         const thisRecord = valuesInLine.map((value, i) => ({
           name: this.fields[i],

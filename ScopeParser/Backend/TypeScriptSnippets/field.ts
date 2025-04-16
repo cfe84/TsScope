@@ -1,7 +1,7 @@
-{
-    name: {
-        namespace: __namespace__,
-        name: "__name__",
-    },
-    value: __value__,
-}
+      {
+        name: {
+          namespace: __namespace__,
+          name: "__name__",
+        },
+        value: __value__,
+      }
