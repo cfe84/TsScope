@@ -6,6 +6,8 @@ export interface IExportSink {
     recordHandler: (record: any) => void,
     doneHandler?: () => void
   ): void;
+
+  getAsyncIterator(): AsyncIterator<any, any, any>;
 }
 
 export interface IImportSource<T> {
@@ -450,8 +452,10 @@ function createStream(/*%paramSignatures%*/) {
   }
 
   class ExportSink implements IConsumer, IClosableOutput, IExportSink {
+    private isDone = false;
     constructor(private source: Source) {
       this.addEventHandlers = this.addEventHandlers.bind(this);
+      this.getAsyncIterator = this.getAsyncIterator.bind(this);
       this.source.registerConsumer(this);
       closableOutputs.push(this);
     }
@@ -466,6 +470,7 @@ function createStream(/*%paramSignatures%*/) {
 
     done(source: Source): void {
       this.onDone.forEach((callback) => callback());
+      this.isDone = true;
     }
 
     close(): void {}
@@ -479,6 +484,47 @@ function createStream(/*%paramSignatures%*/) {
       if (doneHandler) {
         this.onDone.push(doneHandler);
       }
+    }
+
+    getAsyncIterator(): AsyncIterator<any, any, any> {
+      console.log("getAsyncIterator called");
+
+      const asyncIterator = {
+        next: (): Promise<IteratorResult<any>> => {
+          console.log("Next called");
+          return new Promise((resolve) => {
+            console.log("Starting the promise");
+            if (this.isDone) {
+              console.warn(
+                `Warning: ExportSink is already done. Returning empty iterator.`
+              );
+              resolve({ done: true, value: null });
+              return;
+            }
+            const recordResolver = (record: any) => {
+              console.log("Record resolved");
+              resolve({ done: false, value: record });
+              removeResolvers();
+            };
+            const doneResolver = () => {
+              console.log("Done resolved");
+              resolve({ done: true, value: null });
+              removeResolvers();
+            };
+            const removeResolvers = () => {
+              console.log("Removing resolvers");
+              this.onRecord = this.onRecord.filter(
+                (cb) => cb !== recordResolver
+              );
+              this.onDone = this.onDone.filter((cb) => cb !== doneResolver);
+            };
+            this.onRecord.push(recordResolver);
+            this.onDone.push(doneResolver);
+            console.log("Resolvers added");
+          });
+        },
+      };
+      return asyncIterator;
     }
 
     onRecord: ((record: any) => void)[] = [];
@@ -530,12 +576,12 @@ function createAsyncProcessor(/*%paramSignatures%*/) {
       function returnIfDone() {
         if (++done === __exportCount__) {
           resolve({
-/*%exportSimpleResults%*/
+            /*%exportSimpleResults%*/
           });
         }
       }
-/*%exportAddEventHandlers%*/
-/*%importSendAllRecords%*/
+      /*%exportAddEventHandlers%*/
+      /*%importSendAllRecords%*/
     });
   };
 }

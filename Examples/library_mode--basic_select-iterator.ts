@@ -14,15 +14,22 @@ const users = [
   { name: "Amelia", age: 24 },
 ];
 
-const stream = createStream(30);
-const records = stream.users_above_age.addIterator();
+async function runAsync() {
+  const stream = createStream(30);
+  const recordsProcessor = stream.users_above_age.getAsyncIterator();
 
-setTimeout(() => {
-  for (let record of records) {
-    console.log(record);
-  }
-  console.log("Finished iterating over records");
-}, 1);
+  setTimeout(async () => {
+    console.log("Starting to iterate over records");
+    let record: any;
+    let max = 10;
+    while ((record = await recordsProcessor.next()).done === false) {
+      console.log(record);
+    }
+    console.log("Finished iterating over records");
+  }, 1);
 
-users.forEach(stream.users.send);
-stream.close();
+  users.forEach(stream.users.send);
+  stream.users.close();
+}
+
+runAsync().then();
