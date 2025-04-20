@@ -159,7 +159,17 @@ function createStream(/*%paramSignatures%*/) {
     start(): void;
   }
 
-  class FileSource extends Source implements IStartable {
+  class FileSourceFactory {
+    static create(filePath: string, recordMapper: RecordMapper): IStartable {
+      const ext = path.extname(filePath);
+      if (ext === ".csv") {
+        return new CsvFileSource(filePath, new StarRecordMapper());
+      }
+      throw new Error(`Unsupported file type: ${ext}`);
+    }
+  }
+
+  class CsvFileSource extends Source implements IStartable {
     private fields: QualifiedName[] = [];
 
     constructor(filePath: string, private recordMapper: RecordMapper) {

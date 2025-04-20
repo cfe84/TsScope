@@ -1,1 +1,1 @@
-new FileSource(__filename__, __fieldSpec__)
+FileSourceFactory.create(__filename__, __fieldSpec__)

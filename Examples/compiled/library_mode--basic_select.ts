@@ -6,6 +6,8 @@ export interface IExportSink {
     recordHandler: (record: any) => void,
     doneHandler?: () => void
   ): void;
+
+  getAsyncIterator(): AsyncIterator<any, any, any>;
 }
 
 export interface IImportSource<T> {
@@ -450,21 +452,67 @@ function createStream(minimumAge: string) {
   }
 
   class ExportSink implements IConsumer, IClosableOutput, IExportSink {
+    private isDone = false;
     constructor(private source: Source) {
       this.addEventHandlers = this.addEventHandlers.bind(this);
+      this.getAsyncIterator = this.getAsyncIterator.bind(this);
       this.source.registerConsumer(this);
       closableOutputs.push(this);
+    }
+
+    getAsyncIterator(): AsyncIterator<any, any, any> {
+      console.log("getAsyncIterator called");
+
+      const asyncIterator = {
+        next: (): Promise<IteratorResult<any>> => {
+          console.log("Next called");
+          return new Promise((resolve) => {
+            console.log("Starting the promise");
+            if (this.isDone) {
+              console.warn(
+                `Warning: ExportSink is already done. Returning empty iterator.`
+              );
+              resolve({ done: true, value: null });
+              return;
+            }
+            const recordResolver = (record: any) => {
+              console.log("Record resolved");
+              resolve({ done: false, value: record });
+              removeResolvers();
+            };
+            const doneResolver = () => {
+              console.log("Done resolved");
+              resolve({ done: true, value: null });
+              removeResolvers();
+            };
+            const removeResolvers = () => {
+              console.log("Removing resolvers");
+              this.onRecord = this.onRecord.filter(
+                (cb) => cb !== recordResolver
+              );
+              this.onDone = this.onDone.filter((cb) => cb !== doneResolver);
+            };
+            this.onRecord.push(recordResolver);
+            this.onDone.push(doneResolver);
+            console.log("Resolvers added");
+          });
+        },
+      };
+      return asyncIterator;
     }
 
     receiveSchema(source: Source, schema: QualifiedName[]): void {}
 
     receiveRecord(source: Source, record: SourceRecord): void {
+      console.log("Record received. Count of resolver: ", this.onRecord.length);
       this.onRecord.forEach((callback) =>
         callback(recordToObject(record, false))
       );
     }
 
     done(source: Source): void {
+      console.log("Done received. Count of resolver: ", this.onDone.length);
+      this.isDone = true;
       this.onDone.forEach((callback) => callback());
     }
 
@@ -496,18 +544,21 @@ function createStream(minimumAge: string) {
 
   // This is where your script code starts.
 
-  
-  
-  
-const SOURCE__users_0 = new ImportSource<UsersRecord>();
-const SOURCE__users_above_age_0 = new NamedSource(new SelectQuerySource(SOURCE__users_0, new StarRecordMapper(), (record: any) => {
-    record = recordToObject(record);
-    Object.assign(globalThis, record);
-    const res = // Condition must be on new line to accomodate for the tsIgnore flag
-        age > Number.parseInt(minimumAge)
-    return res;
-}), "users_above_age");
-const EXPORT_users_above_age = new ExportSink(SOURCE__users_above_age_0);
+  const SOURCE__users_0 = new ImportSource<UsersRecord>();
+  const SOURCE__users_above_age_0 = new NamedSource(
+    new SelectQuerySource(
+      SOURCE__users_0,
+      new StarRecordMapper(),
+      (record: any) => {
+        record = recordToObject(record);
+        Object.assign(globalThis, record);
+        const res = age > Number.parseInt(minimumAge); // Condition must be on new line to accomodate for the tsIgnore flag
+        return res;
+      }
+    ),
+    "users_above_age"
+  );
+  const EXPORT_users_above_age = new ExportSink(SOURCE__users_above_age_0);
 
   ///////////////////////////////////////////////
   //                                           //
@@ -523,7 +574,7 @@ const EXPORT_users_above_age = new ExportSink(SOURCE__users_above_age_0);
   return {
     start,
     users: SOURCE__users_0 as IImportSource<any>,
-    users_above_age: EXPORT_users_above_age as IExportSink
+    users_above_age: EXPORT_users_above_age as IExportSink,
   };
 }
 
@@ -547,7 +598,7 @@ function createAsyncProcessor(minimumAge: string) {
       function returnIfDone() {
         if (++done === 1) {
           resolve({
-            users_above_age: RES_users_above_age
+            users_above_age: RES_users_above_age,
           });
         }
       }
