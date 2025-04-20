@@ -101,7 +101,7 @@ This compiler is using this syntax: (_note: this is not perfect because it's gen
 
 <OUTPUT> ::= "OUTPUT" <SOURCE> "TO" <STRING_VALUE>
 
-<PARAM> ::= "PARAM" <STRING> ":" [ <PARAM_DEFAULT_VALUE> ]
+<PARAM> ::= "PARAM" <STRING>  [ ":" <PARAM_DEFAULT_VALUE> ]
 
 <PARAM_DEFAULT_VALUE> ::=
       <STRING_LITERAL>

@@ -163,16 +163,60 @@ function createStream() {
     static create(filePath: string, recordMapper: RecordMapper): Source {
       const ext = path.extname(filePath);
       if (ext === ".csv") {
-        return new CsvFileSource(filePath, recordMapper);
+        return new CsvFileSource(filePath, recordMapper, ",");
+      }
+      if (ext === ".tsv") {
+        return new CsvFileSource(filePath, recordMapper, "\t");
+      }
+      if (ext === ".json") {
+        return new JsonFileSource(filePath, recordMapper);
       }
       throw new Error(`Unsupported file type: ${ext}`);
+    }
+  }
+
+  class JsonFileSource extends Source implements IStartable {
+    constructor(private filePath: string, private recordMapper: RecordMapper) {
+      super();
+      startable.push(this);
+    }
+
+    start(): void {
+      const records = JSON.parse(fs.readFileSync(this.filePath, "utf-8"));
+      this.sendHeaders(records);
+      for (const record of records) {
+        const recordFields = Object.entries(record).map(([key, value]) => ({
+          name: { name: key },
+          value,
+        }));
+        const mappedRecord = this.recordMapper.mapRecord(recordFields);
+        this.notifyConsumers(mappedRecord);
+      }
+      this.notifyConsumersDone();
+    }
+
+    private sendHeaders(records: any[]): void {
+      if (records.length === 0) {
+        this.sendSchema(this.recordMapper.mapHeaders([]));
+        return;
+      }
+      const fields = Object.keys(records[0]).map((key) => ({
+        name: key,
+        namespace: undefined,
+      }));
+      const headers = this.recordMapper.mapHeaders(fields);
+      this.sendSchema(headers);
     }
   }
 
   class CsvFileSource extends Source implements IStartable {
     private fields: QualifiedName[] = [];
 
-    constructor(filePath: string, private recordMapper: RecordMapper) {
+    constructor(
+      filePath: string,
+      private recordMapper: RecordMapper,
+      private delimiter: string = ","
+    ) {
       super();
       this.file = fs.createReadStream(filePath);
       startable.push(this);
@@ -204,7 +248,7 @@ function createStream() {
       if (this.aggregate === "") {
         return;
       }
-      const valuesInLine = this.aggregate.split(",");
+      const valuesInLine = this.aggregate.split(this.delimiter);
       if (this.fields.length === 0) {
         // first line, extract fields
         this.fields = valuesInLine.map((field) => ({
@@ -302,8 +346,8 @@ function createStream() {
 
     private leftRecords: SourceRecord[] = [];
     private rightRecords: SourceRecord[] = [];
-    private leftSchema: QualifiedName[] = [];
-    private rightSchema: QualifiedName[] = [];
+    private leftSchema?: QualifiedName[];
+    private rightSchema?: QualifiedName[];
     private leftDone: boolean = false;
     private rightDone: boolean = false;
 
@@ -322,8 +366,10 @@ function createStream() {
       if (source === this.right) {
         this.rightSchema = schema;
       }
-      const fullSchema = [...this.leftSchema, ...this.rightSchema];
-      this.sendSchema(fullSchema);
+      if (this.leftSchema && this.rightSchema) {
+        const fullSchema = [...this.leftSchema, ...this.rightSchema];
+        this.sendSchema(fullSchema);
+      }
     }
 
     override done(source: Source): void {
@@ -559,30 +605,23 @@ function createStream() {
       {
         name: {
           namespace: undefined,
-          name: "id",
+          name: "task",
+        },
+        value: this.findField(record, undefined, "name"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "taskId",
         },
         value: this.findField(record, undefined, "id"),
       },
       {
         name: {
           namespace: undefined,
-          name: "name",
+          name: "assignee",
         },
-        value: this.findField(record, undefined, "firstName"),
-      },
-      {
-        name: {
-          namespace: undefined,
-          name: "roleId",
-        },
-        value: this.findField(record, undefined, "roleId"),
-      },
-      {
-        name: {
-          namespace: undefined,
-          name: "age",
-        },
-        value: this.findField(record, undefined, "age"),
+        value: this.findField(record, undefined, "assignee"),
       }
     ];
   }
@@ -590,31 +629,17 @@ function createStream() {
   mapHeaders(headers: QualifiedName[]): QualifiedName[] {
     const res: QualifiedName[] = [];
   
-    // id
+    // Alias field: task
+    res.push({ name: "task" });
+    // Alias field: taskId
+    res.push({ name: "taskId" });
+    // assignee
     // Find a header with only the name
-    let header_0_n = headers.find(header => header.name === "id");
-    if (header_0_n) {
-      res.push(header_0_n);
-    } else {
-      throw new Error(`Header not found: id. Available headers were: ${headers.map(header => header.name).join(", ")}`);
-    }
-    // Alias field: name
-    res.push({ name: "name" });
-    // roleId
-    // Find a header with only the name
-    let header_2_n = headers.find(header => header.name === "roleId");
+    let header_2_n = headers.find(header => header.name === "assignee");
     if (header_2_n) {
       res.push(header_2_n);
     } else {
-      throw new Error(`Header not found: roleId. Available headers were: ${headers.map(header => header.name).join(", ")}`);
-    }
-    // age
-    // Find a header with only the name
-    let header_3_n = headers.find(header => header.name === "age");
-    if (header_3_n) {
-      res.push(header_3_n);
-    } else {
-      throw new Error(`Header not found: age. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+      throw new Error(`Header not found: assignee. Available headers were: ${headers.map(header => header.name).join(", ")}`);
     }
 
     return res;
@@ -628,30 +653,16 @@ function createStream() {
       {
         name: {
           namespace: undefined,
-          name: "id",
+          name: "firstName",
         },
-        value: this.findField(record, undefined, "id"),
+        value: this.findField(record, undefined, "firstName"),
       },
       {
         name: {
           namespace: undefined,
-          name: "name",
+          name: "task",
         },
-        value: this.findField(record, undefined, "name"),
-      },
-      {
-        name: {
-          namespace: undefined,
-          name: "anotherCopyOfName",
-        },
-        value: this.findField(record, undefined, "name"),
-      },
-      {
-        name: {
-          namespace: undefined,
-          name: "age",
-        },
-        value: this.findField(record, undefined, "age"),
+        value: this.findField(record, undefined, "task"),
       }
     ];
   }
@@ -659,148 +670,41 @@ function createStream() {
   mapHeaders(headers: QualifiedName[]): QualifiedName[] {
     const res: QualifiedName[] = [];
   
-    // id
+    // firstName
     // Find a header with only the name
-    let header_0_n = headers.find(header => header.name === "id");
+    let header_0_n = headers.find(header => header.name === "firstName");
     if (header_0_n) {
       res.push(header_0_n);
     } else {
-      throw new Error(`Header not found: id. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+      throw new Error(`Header not found: firstName. Available headers were: ${headers.map(header => header.name).join(", ")}`);
     }
-    // name
+    // task
     // Find a header with only the name
-    let header_1_n = headers.find(header => header.name === "name");
+    let header_1_n = headers.find(header => header.name === "task");
     if (header_1_n) {
       res.push(header_1_n);
     } else {
-      throw new Error(`Header not found: name. Available headers were: ${headers.map(header => header.name).join(", ")}`);
-    }
-    // Alias field: anotherCopyOfName
-    res.push({ name: "anotherCopyOfName" });
-    // age
-    // Find a header with only the name
-    let header_3_n = headers.find(header => header.name === "age");
-    if (header_3_n) {
-      res.push(header_3_n);
-    } else {
-      throw new Error(`Header not found: age. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+      throw new Error(`Header not found: task. Available headers were: ${headers.map(header => header.name).join(", ")}`);
     }
 
     return res;
   }
 }
 
-  class RecordMapper_2 extends RecordMapper {
-  mapRecord(record: SourceRecord): SourceRecord {
-    Object.assign(globalThis, recordToObject(record));
-    return [
-      {
-        name: {
-          namespace: undefined,
-          name: "id",
-        },
-        value: this.findField(record, undefined, "id"),
-      },
-      {
-        name: {
-          namespace: undefined,
-          name: "name",
-        },
-        value: this.findField(record, undefined, "name"),
-      }
-    ];
-  }
-
-  mapHeaders(headers: QualifiedName[]): QualifiedName[] {
-    const res: QualifiedName[] = [];
-  
-    // id
-    // Find a header with only the name
-    let header_0_n = headers.find(header => header.name === "id");
-    if (header_0_n) {
-      res.push(header_0_n);
-    } else {
-      throw new Error(`Header not found: id. Available headers were: ${headers.map(header => header.name).join(", ")}`);
-    }
-    // name
-    // Find a header with only the name
-    let header_1_n = headers.find(header => header.name === "name");
-    if (header_1_n) {
-      res.push(header_1_n);
-    } else {
-      throw new Error(`Header not found: name. Available headers were: ${headers.map(header => header.name).join(", ")}`);
-    }
-
-    return res;
-  }
+  function condition_0(record) {
+  // Inner  (line 4, column 51)
+  record = recordToObject(record);
+  Object.assign(globalThis, record);
+  const res = // Condition must be on new line to accomodate for the tsIgnore flag
+    users.id === `${assignee}`;
+  return res;
 }
 
-  class RecordMapper_3 extends RecordMapper {
-  mapRecord(record: SourceRecord): SourceRecord {
-    Object.assign(globalThis, recordToObject(record));
-    return [
-      {
-        name: {
-          namespace: undefined,
-          name: "someId",
-        },
-        value: this.findField(record, undefined, "id"),
-      },
-      {
-        name: {
-          namespace: undefined,
-          name: "someName",
-        },
-        value: this.findField(record, undefined, "name"),
-      },
-      {
-        name: {
-          namespace: undefined,
-          name: "anotherAge",
-        },
-        value: this.findField(record, undefined, "age"),
-      }
-    ];
-  }
-
-  mapHeaders(headers: QualifiedName[]): QualifiedName[] {
-    const res: QualifiedName[] = [];
-  
-    // Alias field: someId
-    res.push({ name: "someId" });
-    // Alias field: someName
-    res.push({ name: "someName" });
-    // Alias field: anotherAge
-    res.push({ name: "anotherAge" });
-
-    return res;
-  }
-}
-
-  
-  const SOURCE__input_0 = new NamedSource(FileSourceFactory.create("inputs/users.csv", new RecordMapper_0()), "input");
-  const SOURCE__fields_0 = new NamedSource(new SelectQuerySource(SOURCE__input_0, new RecordMapper_1(), undefined), "fields");
-  const OUTPUT_FILE__0 = new FileOutput("outputs/select--alias.csv");
-  SOURCE__fields_0.registerConsumer(OUTPUT_FILE__0);
-  
-  const SOURCE__where_0 = new NamedSource(new SelectQuerySource(SOURCE__fields_0, new RecordMapper_2(), (record: any) => {
-      record = recordToObject(record);
-      Object.assign(globalThis, record);
-      const res = // Condition must be on new line to accomodate for the tsIgnore flag
-          fields.age >= 30
-      return res;
-  }), "where");
-  const OUTPUT_FILE__1 = new FileOutput("outputs/select--alias_where.csv");
-  SOURCE__where_0.registerConsumer(OUTPUT_FILE__1);
-  
-  const OUTPUT_FILE__2 = new FileOutput("outputs/select--alias_where2.csv");
-  new SelectQuerySource(SOURCE__fields_0, new RecordMapper_3(), (record: any) => {
-      record = recordToObject(record);
-      Object.assign(globalThis, record);
-      const res = // Condition must be on new line to accomodate for the tsIgnore flag
-          age > 30
-      return res;
-  }).registerConsumer(OUTPUT_FILE__2);
+  const SOURCE__users_0 = new NamedSource(FileSourceFactory.create("inputs/users.csv", new StarRecordMapper()), "users");
+  const SOURCE__tasks_0 = new NamedSource(FileSourceFactory.create("inputs/tasks.json", new RecordMapper_0()), "tasks");
+  const SOURCE__assignedTasks_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__users_0, SOURCE__tasks_0, condition_0, JoinType.Inner), new RecordMapper_1(), undefined), "assignedTasks");
+  const OUTPUT_FILE__0 = new FileOutput("outputs/json_file_source.csv");
+  SOURCE__assignedTasks_0.registerConsumer(OUTPUT_FILE__0);
   
 
   ///////////////////////////////////////////////

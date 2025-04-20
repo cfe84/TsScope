@@ -1,12 +1,26 @@
 import * as fs from "fs";
 import * as path from "path";
 
+export interface IExportSink {
+  addEventHandlers(
+    recordHandler: (record: any) => void,
+    doneHandler?: () => void
+  ): void;
+
+  getAsyncIterator(): AsyncIterator<any, any, any>;
+}
+
+export interface IImportSource<T> {
+  send(record: T);
+  close();
+}
+
 /*************
  * The following code is a boilerplate for the script.
  * "Custom" code is inserted lower down.
  */
 
-function run() {
+function createStream() {
   ///////////////////////////////////////////////
   //                                           //
   //             Start boilerplate             //
@@ -23,13 +37,7 @@ function run() {
     value: any;
   }
 
-  interface FieldsSpec {
-    fieldFilter: (field: QualifiedName) => boolean;
-    missingFields: (field: QualifiedName[]) => {
-      result: string[];
-      position: string;
-    };
-  }
+  type SourceRecord = Field[];
 
   abstract class RecordMapper {
     abstract mapRecord(record: SourceRecord): SourceRecord;
@@ -62,20 +70,27 @@ function run() {
     }
   }
 
+  // TODO: Reduce the clutter for features that are not used.
   class StarRecordMapper extends RecordMapper {
     mapRecord = (record: SourceRecord) => record;
-    mapHeaders = (fields: QualifiedName[]): QualifiedName[] => fields;
+    mapHeaders = (fields: QualifiedName[]): QualifiedName[] =>
+      fields.map((field) => ({
+        name: field.name,
+      }));
   }
 
-  type SourceRecord = Field[];
-
-  function recordToObject(record: SourceRecord): { [key: string]: any } {
+  function recordToObject(
+    record: SourceRecord,
+    addNamespace = true
+  ): { [key: string]: any } {
     const obj: { [key: string]: any } = {};
-    // We give precedence to namespaces. If a field is conflicting
-    // with a namespace, it should be ignored.
-    for (const field of record) {
-      if (field.name.namespace && !(field.name.namespace in obj)) {
-        obj[field.name.namespace] = {};
+    if (addNamespace) {
+      // We give precedence to namespaces. If a field is conflicting
+      // with a namespace, it should be ignored.
+      for (const field of record) {
+        if (field.name.namespace && !(field.name.namespace in obj)) {
+          obj[field.name.namespace] = {};
+        }
       }
     }
 
@@ -88,16 +103,19 @@ function run() {
         // TODO: Handle conflicts better.
       }
     }
-    // Assign to namespace if typed.
-    for (const field of record) {
-      if (field.name.namespace) {
-        obj[field.name.namespace][field.name.name] = field.value;
+    if (addNamespace) {
+      // Assign to namespace if typed.
+      for (const field of record) {
+        if (field.name.namespace) {
+          obj[field.name.namespace][field.name.name] = field.value;
+        }
       }
     }
     return obj;
   }
 
   interface IConsumer {
+    receiveSchema(source: Source, schema: QualifiedName[]): void;
     receiveRecord(source: Source, record: SourceRecord): void;
     done(source: Source): void;
   }
@@ -112,13 +130,14 @@ function run() {
     private static sourceCount = 0;
     private consumers: IConsumer[] = [];
 
-    private _id: string = (Source.sourceCount++).toString();
-    public get id(): string {
-      return this._id;
+    public registerConsumer(consumer: IConsumer): void {
+      this.consumers.push(consumer);
     }
 
-    registerConsumer(consumer: IConsumer): void {
-      this.consumers.push(consumer);
+    protected sendSchema(schema: QualifiedName[]): void {
+      this.consumers.forEach((consumer) =>
+        consumer.receiveSchema(this, schema)
+      );
     }
 
     protected notifyConsumers(record: SourceRecord): void {
@@ -140,10 +159,62 @@ function run() {
     start(): void;
   }
 
-  class FileSource extends Source implements IStartable {
-    private fields: QualifiedName[] = [];
+  class FileSourceFactory {
+    static create(filePath: string, recordMapper: RecordMapper): Source {
+      const ext = path.extname(filePath);
+      if (ext === ".csv") {
+        return new CsvFileSource(filePath, recordMapper, ",");
+      }
+      if (ext === ".tsv") {
+        return new CsvFileSource(filePath, recordMapper, "\t");
+      }
+      if (ext === ".json") {
+        return new JsonFileSource(filePath, recordMapper);
+      }
+      throw new Error(`Unsupported file type: ${ext}`);
+    }
+  }
+
+  class JsonFileSource extends Source implements IStartable {
+    private records: any[] = [];
 
     constructor(filePath: string, private recordMapper: RecordMapper) {
+      super();
+      this.records = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      startable.push(this);
+    }
+
+    start(): void {
+      this.sendHeaders();
+      for (const record of this.records) {
+        const mappedRecord = this.recordMapper.mapRecord(record);
+        this.notifyConsumers(mappedRecord);
+      }
+      this.notifyConsumersDone();
+    }
+
+    private sendHeaders(): void {
+      if (this.records.length === 0) {
+        this.sendSchema(this.recordMapper.mapHeaders([]));
+        return;
+      }
+      const fields = Object.keys(this.records[0]).map((key) => ({
+        name: key,
+        namespace: undefined,
+      }));
+      const headers = this.recordMapper.mapHeaders(fields);
+      this.sendSchema(headers);
+    }
+  }
+
+  class CsvFileSource extends Source implements IStartable {
+    private fields: QualifiedName[] = [];
+
+    constructor(
+      filePath: string,
+      private recordMapper: RecordMapper,
+      private delimiter: string = ","
+    ) {
       super();
       this.file = fs.createReadStream(filePath);
       startable.push(this);
@@ -175,13 +246,15 @@ function run() {
       if (this.aggregate === "") {
         return;
       }
-      const valuesInLine = this.aggregate.split(",");
+      const valuesInLine = this.aggregate.split(this.delimiter);
       if (this.fields.length === 0) {
         // first line, extract fields
         this.fields = valuesInLine.map((field) => ({
           name: field,
           namespace: undefined,
         }));
+        const headers = this.recordMapper.mapHeaders(this.fields);
+        this.sendSchema(headers);
       } else {
         const thisRecord = valuesInLine.map((value, i) => ({
           name: this.fields[i],
@@ -205,6 +278,11 @@ function run() {
       source.registerConsumer(this);
     }
 
+    receiveSchema(source: Source, schema: QualifiedName[]): void {
+      const headers = this.recordMapper.mapHeaders(schema);
+      this.sendSchema(headers);
+    }
+
     receiveRecord(_: Source, record: SourceRecord): void {
       if (this.where && !this.where(record)) {
         return;
@@ -220,6 +298,15 @@ function run() {
     constructor(private source: Source, private name: string) {
       super();
       source.registerConsumer(this);
+    }
+
+    receiveSchema(source: Source, schema: QualifiedName[]): void {
+      this.sendSchema(
+        schema.map((field) => ({
+          name: field.name,
+          namespace: this.name,
+        }))
+      );
     }
 
     receiveRecord(_: Source, record: SourceRecord): void {
@@ -277,6 +364,8 @@ function run() {
       if (source === this.right) {
         this.rightSchema = schema;
       }
+      const fullSchema = [...this.leftSchema, ...this.rightSchema];
+      this.sendSchema(fullSchema);
     }
 
     override done(source: Source): void {
@@ -285,6 +374,9 @@ function run() {
       } else if (source === this.right) {
         this.rightDone = true;
       }
+      // Todo: There's probably a smarter way to do that.
+      // We only need one of the joins to be done before we
+      // can start matching the rest of the incomings.
       if (this.leftDone && this.rightDone) {
         this.start();
       }
@@ -350,9 +442,11 @@ function run() {
   }
 
   class FileOutput implements IConsumer, IClosableOutput {
-    private wroteHeader: boolean = false;
-
     constructor(private filePath: string) {}
+
+    receiveSchema(_: Source, schema: QualifiedName[]): void {
+      this.writeHeader(schema);
+    }
 
     done(source: Source): void {
       this.close();
@@ -369,21 +463,13 @@ function run() {
     }
 
     receiveRecord(_: Source, record: SourceRecord): void {
-      if (!this.wroteHeader) {
-        this.writeHeader(
-          _,
-          record.map((field) => field.name)
-        );
-      }
-
       fs.appendFileSync(
         this.filePath,
         record.map((field) => this.fieldToString(field.value)).join(",") + "\n"
       );
     }
 
-    private writeHeader(_: Source, schema: QualifiedName[]): void {
-      this.wroteHeader = true;
+    private writeHeader(schema: QualifiedName[]): void {
       fs.writeFileSync(
         this.filePath,
         schema
@@ -393,6 +479,108 @@ function run() {
     }
 
     close(): void {}
+  }
+
+  class ImportSource<T> extends Source implements IImportSource<T> {
+    constructor() {
+      super();
+      this.send = this.send.bind(this);
+      this.close = this.close.bind(this);
+    }
+
+    send(record: T) {
+      const sourceRecord = Object.entries(record as any).map(
+        ([key, value]) => ({
+          name: { name: key },
+          value,
+        })
+      );
+      this.notifyConsumers(sourceRecord);
+    }
+
+    close() {
+      this.notifyConsumersDone();
+    }
+  }
+
+  class ExportSink implements IConsumer, IClosableOutput, IExportSink {
+    private isDone = false;
+    constructor(private source: Source) {
+      this.addEventHandlers = this.addEventHandlers.bind(this);
+      this.getAsyncIterator = this.getAsyncIterator.bind(this);
+      this.source.registerConsumer(this);
+      closableOutputs.push(this);
+    }
+
+    receiveSchema(source: Source, schema: QualifiedName[]): void {}
+
+    receiveRecord(source: Source, record: SourceRecord): void {
+      this.onRecord.forEach((callback) =>
+        callback(recordToObject(record, false))
+      );
+    }
+
+    done(source: Source): void {
+      this.onDone.forEach((callback) => callback());
+      this.isDone = true;
+    }
+
+    close(): void {}
+
+    addEventHandlers(
+      // TODO: handle typing
+      recordHandler: (record: any) => void,
+      doneHandler?: () => void
+    ) {
+      this.onRecord.push(recordHandler);
+      if (doneHandler) {
+        this.onDone.push(doneHandler);
+      }
+    }
+
+    getAsyncIterator(): AsyncIterator<any, any, any> {
+      console.log("getAsyncIterator called");
+
+      const asyncIterator = {
+        next: (): Promise<IteratorResult<any>> => {
+          console.log("Next called");
+          return new Promise((resolve) => {
+            console.log("Starting the promise");
+            if (this.isDone) {
+              console.warn(
+                `Warning: ExportSink is already done. Returning empty iterator.`
+              );
+              resolve({ done: true, value: null });
+              return;
+            }
+            const recordResolver = (record: any) => {
+              console.log("Record resolved");
+              resolve({ done: false, value: record });
+              removeResolvers();
+            };
+            const doneResolver = () => {
+              console.log("Done resolved");
+              resolve({ done: true, value: null });
+              removeResolvers();
+            };
+            const removeResolvers = () => {
+              console.log("Removing resolvers");
+              this.onRecord = this.onRecord.filter(
+                (cb) => cb !== recordResolver
+              );
+              this.onDone = this.onDone.filter((cb) => cb !== doneResolver);
+            };
+            this.onRecord.push(recordResolver);
+            this.onDone.push(doneResolver);
+            console.log("Resolvers added");
+          });
+        },
+      };
+      return asyncIterator;
+    }
+
+    onRecord: ((record: any) => void)[] = [];
+    onDone: (() => void)[] = [];
   }
 
   const startable: IStartable[] = [];
@@ -406,32 +594,31 @@ function run() {
 
   // This is where your script code starts.
 
-  /*%params%*/
   class RecordMapper_0 extends RecordMapper {
   mapRecord(record: SourceRecord): SourceRecord {
     Object.assign(globalThis, recordToObject(record));
     return [
       {
-    name: {
-        namespace: undefined,
-        name: "name",
-    },
-    value: this.findField(record, "users", "firstName"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "role",
-    },
-    value: this.findField(record, "roles", "roleName"),
-},
-{
-    name: {
-        namespace: undefined,
-        name: "country",
-    },
-    value: this.findField(record, undefined, "countryName"),
-}
+        name: {
+          namespace: undefined,
+          name: "name",
+        },
+        value: this.findField(record, "users", "firstName"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "role",
+        },
+        value: this.findField(record, "roles", "roleName"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "country",
+        },
+        value: this.findField(record, undefined, "countryName"),
+      }
     ];
   }
 
@@ -439,17 +626,18 @@ function run() {
     const res: QualifiedName[] = [];
   
     // Alias field: name
-res.push({ name: "name" });
-// Alias field: role
-res.push({ name: "role" });
-// Alias field: country
-res.push({ name: "country" });
+    res.push({ name: "name" });
+    // Alias field: role
+    res.push({ name: "role" });
+    // Alias field: country
+    res.push({ name: "country" });
 
     return res;
   }
 }
 
   function condition_0(record) {
+  // Inner  (line 10, column 5)
   record = recordToObject(record);
   Object.assign(globalThis, record);
   const res = // Condition must be on new line to accomodate for the tsIgnore flag
@@ -457,7 +645,8 @@ res.push({ name: "country" });
   return res;
 }
 
-function condition_1(record) {
+  function condition_1(record) {
+  // Inner  (line 9, column 5)
   record = recordToObject(record);
   Object.assign(globalThis, record);
   const res = // Condition must be on new line to accomodate for the tsIgnore flag
@@ -465,19 +654,19 @@ function condition_1(record) {
   return res;
 }
 
-  const SOURCE__input_0 = new NamedSource(new FileSource("inputs/users.csv", new StarRecordMapper()), "input");
-const SOURCE__roles_0 = new NamedSource(new FileSource("inputs/role.csv", new StarRecordMapper()), "roles");
-const SOURCE__country_0 = new NamedSource(new FileSource("inputs/country.csv", new StarRecordMapper()), "country");
-const SOURCE__withCountry_0 = new NamedSource(new SelectQuerySource(new JoinSource(new JoinSource(new NamedSource(SOURCE__input_0, "users"), SOURCE__roles_0, condition_1, JoinType.Inner), SOURCE__country_0, condition_0, JoinType.Inner), new RecordMapper_0(), (record: any) => {
-    record = recordToObject(record);
-    Object.assign(globalThis, record);
-    const res = // Condition must be on new line to accomodate for the tsIgnore flag
-        age >= 30 && roles.roleName === 'Guest'
-    return res;
-}), "withCountry");
-const OUTPUT_FILE__0 = new FileOutput("outputs/join--two_joins_with_alias.csv");
-SOURCE__withCountry_0.registerConsumer(OUTPUT_FILE__0);
-
+  const SOURCE__input_0 = new NamedSource(FileSourceFactory.create("inputs/users.csv", new StarRecordMapper()), "input");
+  const SOURCE__roles_0 = new NamedSource(FileSourceFactory.create("inputs/role.csv", new StarRecordMapper()), "roles");
+  const SOURCE__country_0 = new NamedSource(FileSourceFactory.create("inputs/country.csv", new StarRecordMapper()), "country");
+  const SOURCE__withCountry_0 = new NamedSource(new SelectQuerySource(new JoinSource(new JoinSource(new NamedSource(SOURCE__input_0, "users"), SOURCE__roles_0, condition_1, JoinType.Inner), SOURCE__country_0, condition_0, JoinType.Inner), new RecordMapper_0(), (record: any) => {
+      record = recordToObject(record);
+      Object.assign(globalThis, record);
+      const res = // Condition must be on new line to accomodate for the tsIgnore flag
+          age >= 30 && roles.roleName === 'Guest'
+      return res;
+  }), "withCountry");
+  const OUTPUT_FILE__0 = new FileOutput("outputs/join--two_joins_with_alias.csv");
+  SOURCE__withCountry_0.registerConsumer(OUTPUT_FILE__0);
+  
 
   ///////////////////////////////////////////////
   //                                           //
@@ -485,23 +674,54 @@ SOURCE__withCountry_0.registerConsumer(OUTPUT_FILE__0);
   //                                           //
   ///////////////////////////////////////////////
 
-  startable.forEach((source) => source.start());
-  closableOutputs.forEach((output) => output.close());
-
-  /*%exports%*/
-}
-
-function loadParameter(paramName: string, defaultValue?: string): string {
-  const value = process.env[paramName];
-  if (value === undefined) {
-    if (defaultValue === undefined) {
-      throw new Error(`Missing parameter '${paramName}'`);
-    }
-    return defaultValue;
+  function start() {
+    startable.forEach((source) => source.start());
+    closableOutputs.forEach((output) => output.close());
   }
-  return value;
+
+  return {
+    start,
+    
+  };
 }
 
 
+const isUsedAsExecutable = process.argv[1] === __filename;
 
-run();
+if (isUsedAsExecutable) {
+  function loadParameter(paramName: string, defaultValue?: string): string {
+    const value = process.env[paramName];
+    if (value === undefined) {
+      if (defaultValue === undefined) {
+        throw new Error(`Missing parameter '${paramName}'`);
+      }
+      return defaultValue;
+    }
+    return value;
+  }
+
+  
+
+  const obj = createStream();
+  obj.start();
+}
+
+function createAsyncProcessor() {
+  return function () {
+    return new Promise((resolve) => {
+      const stream = createStream();
+      let done = 0;
+      function returnIfDone() {
+        if (++done === 0) {
+          resolve({
+            
+          });
+        }
+      }
+      
+      
+    });
+  };
+}
+
+export { createStream, createAsyncProcessor };

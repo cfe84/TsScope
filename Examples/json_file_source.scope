@@ -1,0 +1,6 @@
+users = EXTRACT * FROM "inputs/users.csv";
+tasks = EXTRACT name AS task, id AS taskId, assignee FROM "inputs/tasks.json";
+
+assignedTasks = SELECT firstName, task FROM users INNER JOIN tasks ON {{ users.id === `${assignee}` }};
+
+OUTPUT assignedTasks TO "outputs/json_file_source.csv";

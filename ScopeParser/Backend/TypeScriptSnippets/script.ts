@@ -163,16 +163,60 @@ function createStream(/*%paramSignatures%*/) {
     static create(filePath: string, recordMapper: RecordMapper): Source {
       const ext = path.extname(filePath);
       if (ext === ".csv") {
-        return new CsvFileSource(filePath, recordMapper);
+        return new CsvFileSource(filePath, recordMapper, ",");
+      }
+      if (ext === ".tsv") {
+        return new CsvFileSource(filePath, recordMapper, "\t");
+      }
+      if (ext === ".json") {
+        return new JsonFileSource(filePath, recordMapper);
       }
       throw new Error(`Unsupported file type: ${ext}`);
+    }
+  }
+
+  class JsonFileSource extends Source implements IStartable {
+    constructor(private filePath: string, private recordMapper: RecordMapper) {
+      super();
+      startable.push(this);
+    }
+
+    start(): void {
+      const records = JSON.parse(fs.readFileSync(this.filePath, "utf-8"));
+      this.sendHeaders(records);
+      for (const record of records) {
+        const recordFields = Object.entries(record).map(([key, value]) => ({
+          name: { name: key },
+          value,
+        }));
+        const mappedRecord = this.recordMapper.mapRecord(recordFields);
+        this.notifyConsumers(mappedRecord);
+      }
+      this.notifyConsumersDone();
+    }
+
+    private sendHeaders(records: any[]): void {
+      if (records.length === 0) {
+        this.sendSchema(this.recordMapper.mapHeaders([]));
+        return;
+      }
+      const fields = Object.keys(records[0]).map((key) => ({
+        name: key,
+        namespace: undefined,
+      }));
+      const headers = this.recordMapper.mapHeaders(fields);
+      this.sendSchema(headers);
     }
   }
 
   class CsvFileSource extends Source implements IStartable {
     private fields: QualifiedName[] = [];
 
-    constructor(filePath: string, private recordMapper: RecordMapper) {
+    constructor(
+      filePath: string,
+      private recordMapper: RecordMapper,
+      private delimiter: string = ","
+    ) {
       super();
       this.file = fs.createReadStream(filePath);
       startable.push(this);
@@ -204,7 +248,7 @@ function createStream(/*%paramSignatures%*/) {
       if (this.aggregate === "") {
         return;
       }
-      const valuesInLine = this.aggregate.split(",");
+      const valuesInLine = this.aggregate.split(this.delimiter);
       if (this.fields.length === 0) {
         // first line, extract fields
         this.fields = valuesInLine.map((field) => ({
@@ -302,8 +346,8 @@ function createStream(/*%paramSignatures%*/) {
 
     private leftRecords: SourceRecord[] = [];
     private rightRecords: SourceRecord[] = [];
-    private leftSchema: QualifiedName[] = [];
-    private rightSchema: QualifiedName[] = [];
+    private leftSchema?: QualifiedName[];
+    private rightSchema?: QualifiedName[];
     private leftDone: boolean = false;
     private rightDone: boolean = false;
 
@@ -322,8 +366,10 @@ function createStream(/*%paramSignatures%*/) {
       if (source === this.right) {
         this.rightSchema = schema;
       }
-      const fullSchema = [...this.leftSchema, ...this.rightSchema];
-      this.sendSchema(fullSchema);
+      if (this.leftSchema && this.rightSchema) {
+        const fullSchema = [...this.leftSchema, ...this.rightSchema];
+        this.sendSchema(fullSchema);
+      }
     }
 
     override done(source: Source): void {

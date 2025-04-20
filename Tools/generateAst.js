@@ -43,7 +43,7 @@ function run() {
     "JoinQuery": ["SelectSource left", "AliasableSource right", "JoinType joinType", keyword("ON"), "TsExpression condition"],
     "NumberLiteral": ["decimal value"], // since we output TS we only need number
     "Output": [keyword("OUTPUT"), "Source source", keyword("TO"), "StringValue outputFile"],
-    "Param": [keyword("PARAM"), "string name", keyword(":", "?"), "ParamDefaultValue? defaultValue"],
+    "Param": [keyword("PARAM"), "string name", keyword(":", "with next"), "ParamDefaultValue? defaultValue"],
     "SelectQuery": [keyword("SELECT"), "FieldSpec fields", keyword("FROM"), "SelectSource source", "WhereStatement? where"],
     "Script": ["Statement[] statements", keyword(";", "with previous")],
     "StringLiteral": ["string value"],

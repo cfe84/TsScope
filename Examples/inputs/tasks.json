@@ -1,0 +1,51 @@
+[
+    {
+        "id": 1,
+        "name": "Task 1",
+        "assignee": 1,
+        "description": "This is the first task.",
+        "status": "completed"
+    },
+    {
+        "id": 2,
+        "name": "Task 2",
+        "assignee": 2,
+        "description": "This is the second task.",
+        "status": "in progress"
+    },
+    {
+        "id": 3,
+        "name": "Task 3",
+        "assignee": 1,
+        "description": "This is the third task.",
+        "status": "not started"
+    },
+    {
+        "id": 4,
+        "name": "Task 4",
+        "assignee": 3,
+        "description": "This is the fourth task.",
+        "status": "completed"
+    },
+    {
+        "id": 5,
+        "name": "Task 5",
+        "assignee": 2,
+        "description": "This is the fifth task.",
+        "status": "in progress"
+    },
+    {
+        "id": 6,
+        "name": "Task 6",
+        "assignee": 3,
+        "description": "This is the sixth task.",
+        "status": "not started"
+    },
+    {
+        "id": 7,
+        "name": "Task 7",
+        "assignee": 1,
+        "description": "This is the seventh task.",
+        "status": "completed"
+    }
+]
