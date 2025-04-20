@@ -248,7 +248,9 @@ function createStream(/*%paramSignatures%*/) {
       if (this.aggregate === "") {
         return;
       }
-      const valuesInLine = this.aggregate.split(this.delimiter);
+      const valuesInLine = this.aggregate
+        .split(this.delimiter)
+        .map(this.cleanField);
       if (this.fields.length === 0) {
         // first line, extract fields
         this.fields = valuesInLine.map((field) => ({
@@ -265,6 +267,13 @@ function createStream(/*%paramSignatures%*/) {
         const record = this.recordMapper.mapRecord(thisRecord);
         this.notifyConsumers(record);
       }
+    }
+
+    private cleanField(field: string): string {
+      if (field.startsWith('"') && field.endsWith('"')) {
+        return field.slice(1, -1).replace(/\\"/g, '"').replace(/""/g, '"');
+      }
+      return field;
     }
 
     private file: fs.ReadStream;
@@ -445,8 +454,47 @@ function createStream(/*%paramSignatures%*/) {
     close(): void;
   }
 
-  class FileOutput implements IConsumer, IClosableOutput {
+  class FileOutputFactory {
+    static create(filePath: string): IConsumer {
+      const ext = path.extname(filePath);
+      if (ext === ".csv") {
+        return new SeparatorFileOutput(filePath, ",");
+      }
+      if (ext === ".tsv") {
+        return new SeparatorFileOutput(filePath, "\t");
+      }
+      if (ext === ".json") {
+        return new JsonFileOutput(filePath);
+      }
+      throw new Error(`Unsupported file type: ${ext}`);
+    }
+  }
+
+  class JsonFileOutput implements IConsumer {
+    private firstRecord = true;
     constructor(private filePath: string) {}
+    receiveSchema(_: Source, schema: QualifiedName[]): void {
+      fs.writeFileSync(this.filePath, "[\n");
+    }
+    done(source: Source): void {
+      this.close();
+    }
+    receiveRecord(_: Source, record: SourceRecord): void {
+      let json = "  " + JSON.stringify(recordToObject(record, false));
+      if (this.firstRecord) {
+        this.firstRecord = false;
+      } else {
+        json = ",\n" + json;
+      }
+      fs.appendFileSync(this.filePath, json);
+    }
+    close(): void {
+      fs.appendFileSync(this.filePath, "\n]\n");
+    }
+  }
+
+  class SeparatorFileOutput implements IConsumer, IClosableOutput {
+    constructor(private filePath: string, private separator: string) {}
 
     receiveSchema(_: Source, schema: QualifiedName[]): void {
       this.writeHeader(schema);
@@ -469,7 +517,9 @@ function createStream(/*%paramSignatures%*/) {
     receiveRecord(_: Source, record: SourceRecord): void {
       fs.appendFileSync(
         this.filePath,
-        record.map((field) => this.fieldToString(field.value)).join(",") + "\n"
+        record
+          .map((field) => this.fieldToString(field.value))
+          .join(this.separator) + "\n"
       );
     }
 

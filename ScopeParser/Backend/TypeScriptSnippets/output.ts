@@ -1,2 +1,2 @@
-const __variableName__ = new FileOutput(__fileName__);
+const __variableName__ = FileOutputFactory.create(__fileName__);
 __source__.registerConsumer(__variableName__);

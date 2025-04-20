@@ -163,16 +163,60 @@ function createStream() {
     static create(filePath: string, recordMapper: RecordMapper): Source {
       const ext = path.extname(filePath);
       if (ext === ".csv") {
-        return new CsvFileSource(filePath, recordMapper);
+        return new CsvFileSource(filePath, recordMapper, ",");
+      }
+      if (ext === ".tsv") {
+        return new CsvFileSource(filePath, recordMapper, "\t");
+      }
+      if (ext === ".json") {
+        return new JsonFileSource(filePath, recordMapper);
       }
       throw new Error(`Unsupported file type: ${ext}`);
+    }
+  }
+
+  class JsonFileSource extends Source implements IStartable {
+    constructor(private filePath: string, private recordMapper: RecordMapper) {
+      super();
+      startable.push(this);
+    }
+
+    start(): void {
+      const records = JSON.parse(fs.readFileSync(this.filePath, "utf-8"));
+      this.sendHeaders(records);
+      for (const record of records) {
+        const recordFields = Object.entries(record).map(([key, value]) => ({
+          name: { name: key },
+          value,
+        }));
+        const mappedRecord = this.recordMapper.mapRecord(recordFields);
+        this.notifyConsumers(mappedRecord);
+      }
+      this.notifyConsumersDone();
+    }
+
+    private sendHeaders(records: any[]): void {
+      if (records.length === 0) {
+        this.sendSchema(this.recordMapper.mapHeaders([]));
+        return;
+      }
+      const fields = Object.keys(records[0]).map((key) => ({
+        name: key,
+        namespace: undefined,
+      }));
+      const headers = this.recordMapper.mapHeaders(fields);
+      this.sendSchema(headers);
     }
   }
 
   class CsvFileSource extends Source implements IStartable {
     private fields: QualifiedName[] = [];
 
-    constructor(filePath: string, private recordMapper: RecordMapper) {
+    constructor(
+      filePath: string,
+      private recordMapper: RecordMapper,
+      private delimiter: string = ","
+    ) {
       super();
       this.file = fs.createReadStream(filePath);
       startable.push(this);
@@ -204,7 +248,9 @@ function createStream() {
       if (this.aggregate === "") {
         return;
       }
-      const valuesInLine = this.aggregate.split(",");
+      const valuesInLine = this.aggregate
+        .split(this.delimiter)
+        .map(this.cleanField);
       if (this.fields.length === 0) {
         // first line, extract fields
         this.fields = valuesInLine.map((field) => ({
@@ -221,6 +267,13 @@ function createStream() {
         const record = this.recordMapper.mapRecord(thisRecord);
         this.notifyConsumers(record);
       }
+    }
+
+    private cleanField(field: string): string {
+      if (field.startsWith('"') && field.endsWith('"')) {
+        return field.slice(1, -1).replace(/\\"/g, '"').replace(/""/g, '"');
+      }
+      return field;
     }
 
     private file: fs.ReadStream;
@@ -302,8 +355,8 @@ function createStream() {
 
     private leftRecords: SourceRecord[] = [];
     private rightRecords: SourceRecord[] = [];
-    private leftSchema: QualifiedName[] = [];
-    private rightSchema: QualifiedName[] = [];
+    private leftSchema?: QualifiedName[];
+    private rightSchema?: QualifiedName[];
     private leftDone: boolean = false;
     private rightDone: boolean = false;
 
@@ -322,8 +375,10 @@ function createStream() {
       if (source === this.right) {
         this.rightSchema = schema;
       }
-      const fullSchema = [...this.leftSchema, ...this.rightSchema];
-      this.sendSchema(fullSchema);
+      if (this.leftSchema && this.rightSchema) {
+        const fullSchema = [...this.leftSchema, ...this.rightSchema];
+        this.sendSchema(fullSchema);
+      }
     }
 
     override done(source: Source): void {
@@ -399,8 +454,47 @@ function createStream() {
     close(): void;
   }
 
-  class FileOutput implements IConsumer, IClosableOutput {
+  class FileOutputFactory {
+    static create(filePath: string): IConsumer {
+      const ext = path.extname(filePath);
+      if (ext === ".csv") {
+        return new SeparatorFileOutput(filePath, ",");
+      }
+      if (ext === ".tsv") {
+        return new SeparatorFileOutput(filePath, "\t");
+      }
+      if (ext === ".json") {
+        return new JsonFileOutput(filePath);
+      }
+      throw new Error(`Unsupported file type: ${ext}`);
+    }
+  }
+
+  class JsonFileOutput implements IConsumer {
+    private firstRecord = true;
     constructor(private filePath: string) {}
+    receiveSchema(_: Source, schema: QualifiedName[]): void {
+      fs.writeFileSync(this.filePath, "[\n");
+    }
+    done(source: Source): void {
+      this.close();
+    }
+    receiveRecord(_: Source, record: SourceRecord): void {
+      let json = "  " + JSON.stringify(recordToObject(record, false));
+      if (this.firstRecord) {
+        this.firstRecord = false;
+      } else {
+        json = ",\n" + json;
+      }
+      fs.appendFileSync(this.filePath, json);
+    }
+    close(): void {
+      fs.appendFileSync(this.filePath, "\n]\n");
+    }
+  }
+
+  class SeparatorFileOutput implements IConsumer, IClosableOutput {
+    constructor(private filePath: string, private separator: string) {}
 
     receiveSchema(_: Source, schema: QualifiedName[]): void {
       this.writeHeader(schema);
@@ -423,7 +517,9 @@ function createStream() {
     receiveRecord(_: Source, record: SourceRecord): void {
       fs.appendFileSync(
         this.filePath,
-        record.map((field) => this.fieldToString(field.value)).join(",") + "\n"
+        record
+          .map((field) => this.fieldToString(field.value))
+          .join(this.separator) + "\n"
       );
     }
 
@@ -780,7 +876,7 @@ function createStream() {
   
   const SOURCE__input_0 = new NamedSource(FileSourceFactory.create("inputs/users.csv", new RecordMapper_0()), "input");
   const SOURCE__fields_0 = new NamedSource(new SelectQuerySource(SOURCE__input_0, new RecordMapper_1(), undefined), "fields");
-  const OUTPUT_FILE__0 = new FileOutput("outputs/select--alias.csv");
+  const OUTPUT_FILE__0 = FileOutputFactory.create("outputs/select--alias.csv");
   SOURCE__fields_0.registerConsumer(OUTPUT_FILE__0);
   
   const SOURCE__where_0 = new NamedSource(new SelectQuerySource(SOURCE__fields_0, new RecordMapper_2(), (record: any) => {
@@ -790,10 +886,10 @@ function createStream() {
           fields.age >= 30
       return res;
   }), "where");
-  const OUTPUT_FILE__1 = new FileOutput("outputs/select--alias_where.csv");
+  const OUTPUT_FILE__1 = FileOutputFactory.create("outputs/select--alias_where.csv");
   SOURCE__where_0.registerConsumer(OUTPUT_FILE__1);
   
-  const OUTPUT_FILE__2 = new FileOutput("outputs/select--alias_where2.csv");
+  const OUTPUT_FILE__2 = FileOutputFactory.create("outputs/select--alias_where2.csv");
   new SelectQuerySource(SOURCE__fields_0, new RecordMapper_3(), (record: any) => {
       record = recordToObject(record);
       Object.assign(globalThis, record);

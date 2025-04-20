@@ -445,8 +445,47 @@ function createStream() {
     close(): void;
   }
 
-  class FileOutput implements IConsumer, IClosableOutput {
+  class FileOutputFactory {
+    static create(filePath: string): IConsumer {
+      const ext = path.extname(filePath);
+      if (ext === ".csv") {
+        return new SeparatorFileOutput(filePath, ",");
+      }
+      if (ext === ".tsv") {
+        return new SeparatorFileOutput(filePath, "\t");
+      }
+      if (ext === ".json") {
+        return new JsonFileOutput(filePath);
+      }
+      throw new Error(`Unsupported file type: ${ext}`);
+    }
+  }
+
+  class JsonFileOutput implements IConsumer {
+    private firstRecord = true;
     constructor(private filePath: string) {}
+    receiveSchema(_: Source, schema: QualifiedName[]): void {
+      fs.writeFileSync(this.filePath, "[\n");
+    }
+    done(source: Source): void {
+      this.close();
+    }
+    receiveRecord(_: Source, record: SourceRecord): void {
+      let json = "  " + JSON.stringify(recordToObject(record, false));
+      if (this.firstRecord) {
+        this.firstRecord = false;
+      } else {
+        json = ",\n" + json;
+      }
+      fs.appendFileSync(this.filePath, json);
+    }
+    close(): void {
+      fs.appendFileSync(this.filePath, "\n]\n");
+    }
+  }
+
+  class SeparatorFileOutput implements IConsumer, IClosableOutput {
+    constructor(private filePath: string, private separator: string) {}
 
     receiveSchema(_: Source, schema: QualifiedName[]): void {
       this.writeHeader(schema);
@@ -469,7 +508,9 @@ function createStream() {
     receiveRecord(_: Source, record: SourceRecord): void {
       fs.appendFileSync(
         this.filePath,
-        record.map((field) => this.fieldToString(field.value)).join(",") + "\n"
+        record
+          .map((field) => this.fieldToString(field.value))
+          .join(this.separator) + "\n"
       );
     }
 
@@ -703,7 +744,7 @@ function createStream() {
   const SOURCE__users_0 = new NamedSource(FileSourceFactory.create("inputs/users.csv", new StarRecordMapper()), "users");
   const SOURCE__tasks_0 = new NamedSource(FileSourceFactory.create("inputs/tasks.json", new RecordMapper_0()), "tasks");
   const SOURCE__assignedTasks_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__users_0, SOURCE__tasks_0, condition_0, JoinType.Inner), new RecordMapper_1(), undefined), "assignedTasks");
-  const OUTPUT_FILE__0 = new FileOutput("outputs/json_file_source.csv");
+  const OUTPUT_FILE__0 = FileOutputFactory.create("outputs/json_file_source.json");
   SOURCE__assignedTasks_0.registerConsumer(OUTPUT_FILE__0);
   
 
