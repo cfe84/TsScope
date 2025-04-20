@@ -160,10 +160,10 @@ function createStream(/*%paramSignatures%*/) {
   }
 
   class FileSourceFactory {
-    static create(filePath: string, recordMapper: RecordMapper): IStartable {
+    static create(filePath: string, recordMapper: RecordMapper): Source {
       const ext = path.extname(filePath);
       if (ext === ".csv") {
-        return new CsvFileSource(filePath, new StarRecordMapper());
+        return new CsvFileSource(filePath, recordMapper);
       }
       throw new Error(`Unsupported file type: ${ext}`);
     }

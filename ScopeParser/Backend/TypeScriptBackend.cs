@@ -31,10 +31,10 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
     public string VisitScript(Script node)
     {
         // We need to visit the script first to get all the variables
-        var statementsStr = string.Join("\n", node.Statements.Select(Visit).ToList());
+        var statementsStr = string.Join("\n  ", node.Statements.Select(Visit).Select(s => s.Replace("\n", "\n  ")).ToList());
 
         // Then assemble the rest
-        var conditionsStr = string.Join("\n", conditions);
+        var conditionsStr = string.Join("\n  ", conditions);
         var exportsStr = string.Join(",\n    ", exports);
         var exportAddEventHandlersStr = string.Join("\n", exportEventHandlers);
         var exportSimpleResultsStr = string.Join("\n", exportSimpleResults);
@@ -43,7 +43,7 @@ public class TypeScriptBackend(ISnippetProvider snippetProvider) : INodeVisitor<
         var interfaceTypesStr = string.Join("\n", interfaceTypes);
         var parameterSignaturesStr = string.Join(",\n", parameterSignatures);
         var paramInvokesStr = string.Join(",\n", parameterInvokes);
-        var recordMappersStr = string.Join("\n", recordMappers);
+        var recordMappersStr = string.Join("\n  ", recordMappers);
         var useAsExecutable = HandleUseAsExecutable();
 
         // The main script snippet contains all the boiler plate. Statements are just inserted in its midst
