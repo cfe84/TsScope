@@ -83,8 +83,8 @@ public class BackendTest
             File.Exists(outputFile).Should().BeTrue(expectedFile);
             if (expectedFile.EndsWith(".json"))
             {
-                var expectedContent = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(File.ReadAllText(expectedFile))!;
-                var outputContent = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(File.ReadAllText(outputFile))!;
+                var expectedContent = JsonSerializer.Deserialize<List<Dictionary<string, string>>>(File.ReadAllText(expectedFile))!;
+                var outputContent = JsonSerializer.Deserialize<List<Dictionary<string, string>>>(File.ReadAllText(outputFile))!;
                 outputContent.Should().BeEquivalentTo(expectedContent);
             }
             else if (expectedFile.EndsWith(".csv"))
