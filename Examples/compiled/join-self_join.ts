@@ -653,49 +653,139 @@ function createStream() {
 
   // This is where your script code starts.
 
+  class RecordMapper_0 extends RecordMapper {
+  mapRecord(record: SourceRecord): SourceRecord {
+    Object.assign(globalThis, recordToObject(record));
+    return [
+      {
+        name: {
+          namespace: "users",
+          name: "id",
+        },
+        value: this.findField(record, "users", "id"),
+      },
+      {
+        name: {
+          namespace: "users",
+          name: "firstName",
+        },
+        value: this.findField(record, "users", "firstName"),
+      },
+      {
+        name: {
+          namespace: "users",
+          name: "adminId",
+        },
+        value: this.findField(record, "users", "adminId"),
+      },
+      {
+        name: {
+          namespace: "admins",
+          name: "id",
+        },
+        value: this.findField(record, "admins", "id"),
+      },
+      {
+        name: {
+          namespace: "admins",
+          name: "firstName",
+        },
+        value: this.findField(record, "admins", "firstName"),
+      }
+    ];
+  }
+
+  mapHeaders(headers: QualifiedName[]): QualifiedName[] {
+    const res: QualifiedName[] = [];
   
+    // users.id
+    // Find a header with both namespace and name
+    let header_0_ns_and_n = headers.filter(header => header.namespace).find(header => header.namespace === "users" && header.name === "id");
+    if (header_0_ns_and_n) {
+      res.push(header_0_ns_and_n);
+    } else {
+        // Find a header with only the name
+      let header_0_n = headers.find(header => header.name === "id");
+      if (header_0_n) {
+        res.push(header_0_n);
+      } else {
+        throw new Error(`Header not found: users.id. Available headers were: ${headers.join(", ")}`);
+      }
+    }
+    // users.firstName
+    // Find a header with both namespace and name
+    let header_1_ns_and_n = headers.filter(header => header.namespace).find(header => header.namespace === "users" && header.name === "firstName");
+    if (header_1_ns_and_n) {
+      res.push(header_1_ns_and_n);
+    } else {
+        // Find a header with only the name
+      let header_1_n = headers.find(header => header.name === "firstName");
+      if (header_1_n) {
+        res.push(header_1_n);
+      } else {
+        throw new Error(`Header not found: users.firstName. Available headers were: ${headers.join(", ")}`);
+      }
+    }
+    // users.adminId
+    // Find a header with both namespace and name
+    let header_2_ns_and_n = headers.filter(header => header.namespace).find(header => header.namespace === "users" && header.name === "adminId");
+    if (header_2_ns_and_n) {
+      res.push(header_2_ns_and_n);
+    } else {
+        // Find a header with only the name
+      let header_2_n = headers.find(header => header.name === "adminId");
+      if (header_2_n) {
+        res.push(header_2_n);
+      } else {
+        throw new Error(`Header not found: users.adminId. Available headers were: ${headers.join(", ")}`);
+      }
+    }
+    // admins.id
+    // Find a header with both namespace and name
+    let header_3_ns_and_n = headers.filter(header => header.namespace).find(header => header.namespace === "admins" && header.name === "id");
+    if (header_3_ns_and_n) {
+      res.push(header_3_ns_and_n);
+    } else {
+        // Find a header with only the name
+      let header_3_n = headers.find(header => header.name === "id");
+      if (header_3_n) {
+        res.push(header_3_n);
+      } else {
+        throw new Error(`Header not found: admins.id. Available headers were: ${headers.join(", ")}`);
+      }
+    }
+    // admins.firstName
+    // Find a header with both namespace and name
+    let header_4_ns_and_n = headers.filter(header => header.namespace).find(header => header.namespace === "admins" && header.name === "firstName");
+    if (header_4_ns_and_n) {
+      res.push(header_4_ns_and_n);
+    } else {
+        // Find a header with only the name
+      let header_4_n = headers.find(header => header.name === "firstName");
+      if (header_4_n) {
+        res.push(header_4_n);
+      } else {
+        throw new Error(`Header not found: admins.firstName. Available headers were: ${headers.join(", ")}`);
+      }
+    }
+
+    return res;
+  }
+}
+
   function condition_0(record) {
-  // Left  (line 7, column 54)
+  // Inner  (line 3, column 5)
   record = recordToObject(record);
   Object.assign(globalThis, record);
   const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    users.country === countries.countryCode;
+    users.adminId === admins.id;
   return res;
 }
 
-  function condition_1(record) {
-  // Right  (line 8, column 50)
-  record = recordToObject(record);
-  Object.assign(globalThis, record);
-  const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    roles.id === users.roleId;
-  return res;
-}
-
-  let output: string = "outputs/directed_outer_joins";
-  
   const SOURCE__users_0 = new NamedSource(FileSourceFactory.create("inputs/users.csv", new StarRecordMapper()), "users");
-  const SOURCE__roles_0 = new NamedSource(FileSourceFactory.create("inputs/role.csv", new StarRecordMapper()), "roles");
-  const SOURCE__countries_0 = new NamedSource(FileSourceFactory.create("inputs/country.csv", new StarRecordMapper()), "countries");
-  const SOURCE__users_with_incorrect_countries_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__users_0, SOURCE__countries_0, condition_0, JoinType.LeftOuter), new StarRecordMapper(), (record: any) => {
-      record = recordToObject(record);
-      Object.assign(globalThis, record);
-      const res = // Condition must be on new line to accomodate for the tsIgnore flag
-          !record.countryCode
-      return res;
-  }), "users_with_incorrect_countries");
-  const SOURCE__users_with_incorrect_roles_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__roles_0, SOURCE__users_0, condition_1, JoinType.RightOuter), new StarRecordMapper(), (record: any) => {
-      record = recordToObject(record);
-      Object.assign(globalThis, record);
-      const res = // Condition must be on new line to accomodate for the tsIgnore flag
-          !record.roleName
-      return res;
-  }), "users_with_incorrect_roles");
-  const OUTPUT_FILE__0 = FileOutputFactory.create(`${output}--users_with_incorrect_countries.csv`);
-  SOURCE__users_with_incorrect_countries_0.registerConsumer(OUTPUT_FILE__0);
-  
-  const OUTPUT_FILE__1 = FileOutputFactory.create(`${output}--users_with_incorrect_roles.csv`);
-  SOURCE__users_with_incorrect_roles_0.registerConsumer(OUTPUT_FILE__1);
+  const SOURCE__admins_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__users_0, new NamedSource(SOURCE__users_0, "admins"), condition_0, JoinType.Inner), new RecordMapper_0(), undefined), "admins");
+  const OUTPUT_FILE__0 = FileOutputFactory.create("outputs/join-self_join--1.csv");
+  SOURCE__admins_0.registerConsumer(OUTPUT_FILE__0);
   
 
   ///////////////////////////////////////////////

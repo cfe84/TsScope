@@ -1,4 +1,4 @@
 input = EXTRACT * FROM "inputs/users.csv";
 fields = SELECT id, firstName FROM input;
 fields = SELECT fields.id, firstName, age FROM fields; // <-- Age is missing
-OUTPUT fields TO "fields.csv";
+OUTPUT fields TO "missing_fields--1.csv";

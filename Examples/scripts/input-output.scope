@@ -1,4 +1,4 @@
 input = EXTRACT id, firstName, roleId, age FROM "inputs/users.csv";
-OUTPUT input TO "outputs/input-output_load_and_output.csv";
+OUTPUT input TO "outputs/input-output--load_and_output.csv";
 OUTPUT EXTRACT id, firstName, roleId, age FROM "inputs/users.csv"
-    TO "outputs/input-output_direct_copy.csv";
+    TO "outputs/input-output--direct_copy.csv";

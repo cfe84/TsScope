@@ -218,6 +218,11 @@ function createStream() {
       private delimiter: string = ","
     ) {
       super();
+      if (!fs.existsSync(filePath)) {
+        throw new Error(
+          `File not found: ${filePath} (Searching in ${__dirname})`
+        );
+      }
       this.file = fs.createReadStream(filePath);
       startable.push(this);
     }
@@ -248,7 +253,9 @@ function createStream() {
       if (this.aggregate === "") {
         return;
       }
-      const valuesInLine = this.aggregate.split(this.delimiter);
+      const valuesInLine = this.aggregate
+        .split(this.delimiter)
+        .map(this.cleanField);
       if (this.fields.length === 0) {
         // first line, extract fields
         this.fields = valuesInLine.map((field) => ({
@@ -265,6 +272,13 @@ function createStream() {
         const record = this.recordMapper.mapRecord(thisRecord);
         this.notifyConsumers(record);
       }
+    }
+
+    private cleanField(field: string): string {
+      if (field.startsWith('"') && field.endsWith('"')) {
+        return field.slice(1, -1).replace(/\\"/g, '"').replace(/""/g, '"');
+      }
+      return field;
     }
 
     private file: fs.ReadStream;

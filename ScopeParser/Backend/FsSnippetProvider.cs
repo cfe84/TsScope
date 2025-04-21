@@ -1,7 +1,19 @@
 namespace ScopeParser.Backend;
 
-public class FsSnippetProvider(string snippetsDirectory) : ISnippetProvider
+public class FsSnippetProvider : ISnippetProvider
 {
+    string snippetsDirectory;
+
+    public FsSnippetProvider(string snippetsDirectory)
+    {
+        if (!Directory.Exists(snippetsDirectory))
+        {
+            throw new DirectoryNotFoundException($"The directory {snippetsDirectory} does not exist in {Directory.GetCurrentDirectory()}");
+        }
+        snippetsDirectory = Path.GetFullPath(snippetsDirectory);
+        this.snippetsDirectory = snippetsDirectory;
+    }
+
     public string GetSnippet(string snippetName, params (string key, string value)[] replacements)
     {
         var fileName = $"{snippetName}.ts";

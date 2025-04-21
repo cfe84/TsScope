@@ -1,12 +1,8 @@
-input = EXTRACT * FROM "inputs/users.csv";
+users = EXTRACT * FROM "inputs/users.csv";
 roles = EXTRACT * FROM "inputs/role.csv";
 country = EXTRACT * FROM "inputs/country.csv";
-withCountry = SELECT 
-        users.firstName AS name,
-        roles.roleName AS role,
-        countryName AS country 
-    FROM input AS users
+withCountry = SELECT * FROM users
     INNER JOIN roles ON {{ users.roleId === roles.id }} // TODO : if the named source doesnt exist it segfaults
     INNER JOIN country ON {{ country.countryCode === users.country }} // This doesn't work because the namespace needs to go from one join to the next
     WHERE {{ age >= 30 && roles.roleName === 'Guest' }};
-OUTPUT withCountry TO "outputs/join--two_joins_with_alias.csv";
+OUTPUT withCountry TO "outputs/join-two_joins--1.csv";

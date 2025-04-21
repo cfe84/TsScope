@@ -655,47 +655,35 @@ function createStream() {
 
   
   function condition_0(record) {
-  // Left  (line 7, column 54)
+  // Inner  (line 6, column 5)
   record = recordToObject(record);
   Object.assign(globalThis, record);
   const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    users.country === countries.countryCode;
+    country.countryCode === users.country;
   return res;
 }
 
   function condition_1(record) {
-  // Right  (line 8, column 50)
+  // Inner  (line 5, column 5)
   record = recordToObject(record);
   Object.assign(globalThis, record);
   const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    roles.id === users.roleId;
+    users.roleId === roles.id;
   return res;
 }
 
-  let output: string = "outputs/directed_outer_joins";
-  
   const SOURCE__users_0 = new NamedSource(FileSourceFactory.create("inputs/users.csv", new StarRecordMapper()), "users");
   const SOURCE__roles_0 = new NamedSource(FileSourceFactory.create("inputs/role.csv", new StarRecordMapper()), "roles");
-  const SOURCE__countries_0 = new NamedSource(FileSourceFactory.create("inputs/country.csv", new StarRecordMapper()), "countries");
-  const SOURCE__users_with_incorrect_countries_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__users_0, SOURCE__countries_0, condition_0, JoinType.LeftOuter), new StarRecordMapper(), (record: any) => {
+  const SOURCE__country_0 = new NamedSource(FileSourceFactory.create("inputs/country.csv", new StarRecordMapper()), "country");
+  const SOURCE__withCountry_0 = new NamedSource(new SelectQuerySource(new JoinSource(new JoinSource(SOURCE__users_0, SOURCE__roles_0, condition_1, JoinType.Inner), SOURCE__country_0, condition_0, JoinType.Inner), new StarRecordMapper(), (record: any) => {
       record = recordToObject(record);
       Object.assign(globalThis, record);
       const res = // Condition must be on new line to accomodate for the tsIgnore flag
-          !record.countryCode
+          age >= 30 && roles.roleName === 'Guest'
       return res;
-  }), "users_with_incorrect_countries");
-  const SOURCE__users_with_incorrect_roles_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__roles_0, SOURCE__users_0, condition_1, JoinType.RightOuter), new StarRecordMapper(), (record: any) => {
-      record = recordToObject(record);
-      Object.assign(globalThis, record);
-      const res = // Condition must be on new line to accomodate for the tsIgnore flag
-          !record.roleName
-      return res;
-  }), "users_with_incorrect_roles");
-  const OUTPUT_FILE__0 = FileOutputFactory.create(`${output}--users_with_incorrect_countries.csv`);
-  SOURCE__users_with_incorrect_countries_0.registerConsumer(OUTPUT_FILE__0);
-  
-  const OUTPUT_FILE__1 = FileOutputFactory.create(`${output}--users_with_incorrect_roles.csv`);
-  SOURCE__users_with_incorrect_roles_0.registerConsumer(OUTPUT_FILE__1);
+  }), "withCountry");
+  const OUTPUT_FILE__0 = FileOutputFactory.create("outputs/join-two_joins--1.csv");
+  SOURCE__withCountry_0.registerConsumer(OUTPUT_FILE__0);
   
 
   ///////////////////////////////////////////////

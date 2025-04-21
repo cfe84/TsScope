@@ -20,7 +20,7 @@ export interface IImportSource<T> {
  * "Custom" code is inserted lower down.
  */
 
-function createStream() {
+function createStream(minimumAge: string) {
   ///////////////////////////////////////////////
   //                                           //
   //             Start boilerplate             //
@@ -654,49 +654,17 @@ function createStream() {
   // This is where your script code starts.
 
   
-  function condition_0(record) {
-  // Left  (line 7, column 54)
-  record = recordToObject(record);
-  Object.assign(globalThis, record);
-  const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    users.country === countries.countryCode;
-  return res;
-}
-
-  function condition_1(record) {
-  // Right  (line 8, column 50)
-  record = recordToObject(record);
-  Object.assign(globalThis, record);
-  const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    roles.id === users.roleId;
-  return res;
-}
-
-  let output: string = "outputs/directed_outer_joins";
   
-  const SOURCE__users_0 = new NamedSource(FileSourceFactory.create("inputs/users.csv", new StarRecordMapper()), "users");
-  const SOURCE__roles_0 = new NamedSource(FileSourceFactory.create("inputs/role.csv", new StarRecordMapper()), "roles");
-  const SOURCE__countries_0 = new NamedSource(FileSourceFactory.create("inputs/country.csv", new StarRecordMapper()), "countries");
-  const SOURCE__users_with_incorrect_countries_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__users_0, SOURCE__countries_0, condition_0, JoinType.LeftOuter), new StarRecordMapper(), (record: any) => {
+  
+  const SOURCE__users_0 = new ImportSource<UsersRecord>();
+  const SOURCE__users_above_age_0 = new NamedSource(new SelectQuerySource(SOURCE__users_0, new StarRecordMapper(), (record: any) => {
       record = recordToObject(record);
       Object.assign(globalThis, record);
       const res = // Condition must be on new line to accomodate for the tsIgnore flag
-          !record.countryCode
+          age > Number.parseInt(minimumAge)
       return res;
-  }), "users_with_incorrect_countries");
-  const SOURCE__users_with_incorrect_roles_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__roles_0, SOURCE__users_0, condition_1, JoinType.RightOuter), new StarRecordMapper(), (record: any) => {
-      record = recordToObject(record);
-      Object.assign(globalThis, record);
-      const res = // Condition must be on new line to accomodate for the tsIgnore flag
-          !record.roleName
-      return res;
-  }), "users_with_incorrect_roles");
-  const OUTPUT_FILE__0 = FileOutputFactory.create(`${output}--users_with_incorrect_countries.csv`);
-  SOURCE__users_with_incorrect_countries_0.registerConsumer(OUTPUT_FILE__0);
-  
-  const OUTPUT_FILE__1 = FileOutputFactory.create(`${output}--users_with_incorrect_roles.csv`);
-  SOURCE__users_with_incorrect_roles_0.registerConsumer(OUTPUT_FILE__1);
-  
+  }), "users_above_age");
+  const EXPORT_users_above_age = new ExportSink(SOURCE__users_above_age_0);
 
   ///////////////////////////////////////////////
   //                                           //
@@ -711,45 +679,43 @@ function createStream() {
 
   return {
     start,
-    
+    users: SOURCE__users_0 as IImportSource<any>,
+    users_above_age: EXPORT_users_above_age as IExportSink
   };
 }
 
-
+export interface UsersRecord {
+  name: string;
+  age: number;
+}
 const isUsedAsExecutable = process.argv[1] === __filename;
 
 if (isUsedAsExecutable) {
-  function loadParameter(paramName: string, defaultValue?: string): string {
-    const value = process.env[paramName];
-    if (value === undefined) {
-      if (defaultValue === undefined) {
-        throw new Error(`Missing parameter '${paramName}'`);
-      }
-      return defaultValue;
-    }
-    return value;
-  }
-
-  
-
-  const obj = createStream();
-  obj.start();
+  console.error(`Error: this script contains an IMPORT statement, and as such can only be used in library mode.
+To use this script as an executable, please remove the IMPORT statement.`);
+  process.exit(1);
 }
 
-function createAsyncProcessor() {
-  return function () {
+function createAsyncProcessor(minimumAge: string) {
+  return function (users: UsersRecord[]) {
     return new Promise((resolve) => {
-      const stream = createStream();
+      const stream = createStream(minimumAge);
       let done = 0;
       function returnIfDone() {
-        if (++done === 0) {
+        if (++done === 1) {
           resolve({
-            
+                        users_above_age: RES_users_above_age
           });
         }
       }
-      
-      
+            // TODO: handle type.
+      const RES_users_above_age: any[] = [];
+      stream.users_above_age.addEventHandlers(
+        (record) => RES_users_above_age.push(record),
+        returnIfDone
+      );
+            users.forEach(stream.users.send);
+      stream.users.close();
     });
   };
 }

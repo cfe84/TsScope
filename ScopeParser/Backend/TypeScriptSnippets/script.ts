@@ -218,6 +218,11 @@ function createStream(/*%paramSignatures%*/) {
       private delimiter: string = ","
     ) {
       super();
+      if (!fs.existsSync(filePath)) {
+        throw new Error(
+          `File not found: ${filePath} (Searching in ${__dirname})`
+        );
+      }
       this.file = fs.createReadStream(filePath);
       startable.push(this);
     }

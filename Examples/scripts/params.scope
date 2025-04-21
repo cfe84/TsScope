@@ -1,5 +1,5 @@
 PARAM @input;
-PARAM @output = "outputs/params.csv";
+PARAM @output = "outputs/params--1.csv";
 
 input = EXTRACT * FROM @input;
 OUTPUT input TO @output;

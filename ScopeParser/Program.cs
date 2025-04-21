@@ -3,7 +3,7 @@ using ScopeParser.Backend;
 using ScopeParser.Lexing;
 using ScopeParser.Parsing;
 
-class Program
+public class Program
 {
   public static int Main(string[] args)
   {
@@ -70,17 +70,17 @@ class Program
     return argList;
   }
 
-  private static void runFile(string input, string output)
+  public static bool runFile(string input, string output, string snippetDir = "ScopeParser/Backend/TypeScriptSnippets")
   {
     if (!File.Exists(input))
     {
       Console.Error.WriteLine($"File {input} does not exist.");
-      return;
+      return false;
     }
     if (Path.GetExtension(input) != ".scope")
     {
       Console.Error.WriteLine($"File {input} is not a .scope file.");
-      return;
+      return false;
     }
     if (Path.GetExtension(output) == "")
     {
@@ -90,15 +90,20 @@ class Program
     if (Path.GetExtension(output) != ".ts")
     {
       Console.Error.WriteLine($"File {output} is not a .ts file.");
-      return;
+      return false;
     }
     string source = File.ReadAllText(input);
-    var snippetProvider = new FsSnippetProvider("ScopeParser/Backend/TypeScriptSnippets");
+    var snippetProvider = new FsSnippetProvider(snippetDir);
     string? res = run(source, snippetProvider);
-    if (res != null)
+
+    if (res == null)
     {
-      File.WriteAllText(output, res);
+      Console.Error.WriteLine($"Error while parsing {input}. Code generation failed.");
+      return false;
     }
+
+    File.WriteAllText(output, res);
+    return true;
   }
 
   private static void runREPL()

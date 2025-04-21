@@ -1,3 +1,3 @@
 fields = SELECT id, firstName, age FROM EXTRACT id, firstName, roleId, age FROM "inputs/users.csv";
 mapped = SELECT {{`ID-${id}`}} AS id, {{firstName.toUpperCase()}}, "Yop", "Yop" AS thisOneIsAliased, 54 AS number, true AS aBool FROM fields AS capitalizedName;
-OUTPUT mapped TO "outputs/select--ts-expression.csv";
+OUTPUT mapped TO "outputs/select-ts-expression--1.csv";

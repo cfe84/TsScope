@@ -1,6 +1,6 @@
 input = EXTRACT id, firstName, roleId, age FROM "inputs/users.csv";
 fields = SELECT id, firstName, age FROM input;
 filtered = SELECT firstName, age FROM fields WHERE {{ age > 30 }};
-OUTPUT fields TO "outputs/select_fields.csv";
-OUTPUT input TO "outputs/select_input_copy.csv";
-OUTPUT filtered TO "outputs/select_filtered.csv";
+OUTPUT fields TO "outputs/select--fields.csv";
+OUTPUT input TO "outputs/select--input_copy.csv";
+OUTPUT filtered TO "outputs/select--filtered.csv";

@@ -653,49 +653,255 @@ function createStream() {
 
   // This is where your script code starts.
 
+  class RecordMapper_0 extends RecordMapper {
+  mapRecord(record: SourceRecord): SourceRecord {
+    Object.assign(globalThis, recordToObject(record));
+    return [
+      {
+        name: {
+          namespace: undefined,
+          name: "id",
+        },
+        value: this.findField(record, undefined, "id"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "name",
+        },
+        value: this.findField(record, undefined, "firstName"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "roleId",
+        },
+        value: this.findField(record, undefined, "roleId"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "age",
+        },
+        value: this.findField(record, undefined, "age"),
+      }
+    ];
+  }
+
+  mapHeaders(headers: QualifiedName[]): QualifiedName[] {
+    const res: QualifiedName[] = [];
   
-  function condition_0(record) {
-  // Left  (line 7, column 54)
-  record = recordToObject(record);
-  Object.assign(globalThis, record);
-  const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    users.country === countries.countryCode;
-  return res;
+    // id
+    // Find a header with only the name
+    let header_0_n = headers.find(header => header.name === "id");
+    if (header_0_n) {
+      res.push(header_0_n);
+    } else {
+      throw new Error(`Header not found: id. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+    // Alias field: name
+    res.push({ name: "name" });
+    // roleId
+    // Find a header with only the name
+    let header_2_n = headers.find(header => header.name === "roleId");
+    if (header_2_n) {
+      res.push(header_2_n);
+    } else {
+      throw new Error(`Header not found: roleId. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+    // age
+    // Find a header with only the name
+    let header_3_n = headers.find(header => header.name === "age");
+    if (header_3_n) {
+      res.push(header_3_n);
+    } else {
+      throw new Error(`Header not found: age. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+
+    return res;
+  }
 }
 
-  function condition_1(record) {
-  // Right  (line 8, column 50)
-  record = recordToObject(record);
-  Object.assign(globalThis, record);
-  const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    roles.id === users.roleId;
-  return res;
+  class RecordMapper_1 extends RecordMapper {
+  mapRecord(record: SourceRecord): SourceRecord {
+    Object.assign(globalThis, recordToObject(record));
+    return [
+      {
+        name: {
+          namespace: undefined,
+          name: "id",
+        },
+        value: this.findField(record, undefined, "id"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "name",
+        },
+        value: this.findField(record, undefined, "name"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "anotherCopyOfName",
+        },
+        value: this.findField(record, undefined, "name"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "age",
+        },
+        value: this.findField(record, undefined, "age"),
+      }
+    ];
+  }
+
+  mapHeaders(headers: QualifiedName[]): QualifiedName[] {
+    const res: QualifiedName[] = [];
+  
+    // id
+    // Find a header with only the name
+    let header_0_n = headers.find(header => header.name === "id");
+    if (header_0_n) {
+      res.push(header_0_n);
+    } else {
+      throw new Error(`Header not found: id. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+    // name
+    // Find a header with only the name
+    let header_1_n = headers.find(header => header.name === "name");
+    if (header_1_n) {
+      res.push(header_1_n);
+    } else {
+      throw new Error(`Header not found: name. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+    // Alias field: anotherCopyOfName
+    res.push({ name: "anotherCopyOfName" });
+    // age
+    // Find a header with only the name
+    let header_3_n = headers.find(header => header.name === "age");
+    if (header_3_n) {
+      res.push(header_3_n);
+    } else {
+      throw new Error(`Header not found: age. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+
+    return res;
+  }
 }
 
-  let output: string = "outputs/directed_outer_joins";
+  class RecordMapper_2 extends RecordMapper {
+  mapRecord(record: SourceRecord): SourceRecord {
+    Object.assign(globalThis, recordToObject(record));
+    return [
+      {
+        name: {
+          namespace: undefined,
+          name: "id",
+        },
+        value: this.findField(record, undefined, "id"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "name",
+        },
+        value: this.findField(record, undefined, "name"),
+      }
+    ];
+  }
+
+  mapHeaders(headers: QualifiedName[]): QualifiedName[] {
+    const res: QualifiedName[] = [];
   
-  const SOURCE__users_0 = new NamedSource(FileSourceFactory.create("inputs/users.csv", new StarRecordMapper()), "users");
-  const SOURCE__roles_0 = new NamedSource(FileSourceFactory.create("inputs/role.csv", new StarRecordMapper()), "roles");
-  const SOURCE__countries_0 = new NamedSource(FileSourceFactory.create("inputs/country.csv", new StarRecordMapper()), "countries");
-  const SOURCE__users_with_incorrect_countries_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__users_0, SOURCE__countries_0, condition_0, JoinType.LeftOuter), new StarRecordMapper(), (record: any) => {
+    // id
+    // Find a header with only the name
+    let header_0_n = headers.find(header => header.name === "id");
+    if (header_0_n) {
+      res.push(header_0_n);
+    } else {
+      throw new Error(`Header not found: id. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+    // name
+    // Find a header with only the name
+    let header_1_n = headers.find(header => header.name === "name");
+    if (header_1_n) {
+      res.push(header_1_n);
+    } else {
+      throw new Error(`Header not found: name. Available headers were: ${headers.map(header => header.name).join(", ")}`);
+    }
+
+    return res;
+  }
+}
+
+  class RecordMapper_3 extends RecordMapper {
+  mapRecord(record: SourceRecord): SourceRecord {
+    Object.assign(globalThis, recordToObject(record));
+    return [
+      {
+        name: {
+          namespace: undefined,
+          name: "someId",
+        },
+        value: this.findField(record, undefined, "id"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "someName",
+        },
+        value: this.findField(record, undefined, "name"),
+      },
+      {
+        name: {
+          namespace: undefined,
+          name: "anotherAge",
+        },
+        value: this.findField(record, undefined, "age"),
+      }
+    ];
+  }
+
+  mapHeaders(headers: QualifiedName[]): QualifiedName[] {
+    const res: QualifiedName[] = [];
+  
+    // Alias field: someId
+    res.push({ name: "someId" });
+    // Alias field: someName
+    res.push({ name: "someName" });
+    // Alias field: anotherAge
+    res.push({ name: "anotherAge" });
+
+    return res;
+  }
+}
+
+  
+  const SOURCE__input_0 = new NamedSource(FileSourceFactory.create("inputs/users.csv", new RecordMapper_0()), "input");
+  const SOURCE__fields_0 = new NamedSource(new SelectQuerySource(SOURCE__input_0, new RecordMapper_1(), undefined), "fields");
+  const OUTPUT_FILE__0 = FileOutputFactory.create("outputs/select-alias--1.csv");
+  SOURCE__fields_0.registerConsumer(OUTPUT_FILE__0);
+  
+  const SOURCE__where_0 = new NamedSource(new SelectQuerySource(SOURCE__fields_0, new RecordMapper_2(), (record: any) => {
       record = recordToObject(record);
       Object.assign(globalThis, record);
       const res = // Condition must be on new line to accomodate for the tsIgnore flag
-          !record.countryCode
+          fields.age >= 30
       return res;
-  }), "users_with_incorrect_countries");
-  const SOURCE__users_with_incorrect_roles_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__roles_0, SOURCE__users_0, condition_1, JoinType.RightOuter), new StarRecordMapper(), (record: any) => {
+  }), "where");
+  const OUTPUT_FILE__1 = FileOutputFactory.create("outputs/select-alias--where.csv");
+  SOURCE__where_0.registerConsumer(OUTPUT_FILE__1);
+  
+  const OUTPUT_FILE__2 = FileOutputFactory.create("outputs/select-alias--where2.csv");
+  new SelectQuerySource(SOURCE__fields_0, new RecordMapper_3(), (record: any) => {
       record = recordToObject(record);
       Object.assign(globalThis, record);
       const res = // Condition must be on new line to accomodate for the tsIgnore flag
-          !record.roleName
+          age > 30
       return res;
-  }), "users_with_incorrect_roles");
-  const OUTPUT_FILE__0 = FileOutputFactory.create(`${output}--users_with_incorrect_countries.csv`);
-  SOURCE__users_with_incorrect_countries_0.registerConsumer(OUTPUT_FILE__0);
-  
-  const OUTPUT_FILE__1 = FileOutputFactory.create(`${output}--users_with_incorrect_roles.csv`);
-  SOURCE__users_with_incorrect_roles_0.registerConsumer(OUTPUT_FILE__1);
+  }).registerConsumer(OUTPUT_FILE__2);
   
 
   ///////////////////////////////////////////////

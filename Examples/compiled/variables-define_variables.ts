@@ -653,49 +653,43 @@ function createStream() {
 
   // This is where your script code starts.
 
+  class RecordMapper_0 extends RecordMapper {
+  mapRecord(record: SourceRecord): SourceRecord {
+    Object.assign(globalThis, recordToObject(record));
+    return [
+      {
+        name: {
+          namespace: undefined,
+          name: "name",
+        },
+        value: this.findField(record, undefined, "firstName"),
+      }
+    ];
+  }
+
+  mapHeaders(headers: QualifiedName[]): QualifiedName[] {
+    const res: QualifiedName[] = [];
   
-  function condition_0(record) {
-  // Left  (line 7, column 54)
-  record = recordToObject(record);
-  Object.assign(globalThis, record);
-  const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    users.country === countries.countryCode;
-  return res;
+    // Alias field: name
+    res.push({ name: "name" });
+
+    return res;
+  }
 }
 
-  function condition_1(record) {
-  // Right  (line 8, column 50)
-  record = recordToObject(record);
-  Object.assign(globalThis, record);
-  const res = // Condition must be on new line to accomodate for the tsIgnore flag
-    roles.id === users.roleId;
-  return res;
-}
-
-  let output: string = "outputs/directed_outer_joins";
   
-  const SOURCE__users_0 = new NamedSource(FileSourceFactory.create("inputs/users.csv", new StarRecordMapper()), "users");
-  const SOURCE__roles_0 = new NamedSource(FileSourceFactory.create("inputs/role.csv", new StarRecordMapper()), "roles");
-  const SOURCE__countries_0 = new NamedSource(FileSourceFactory.create("inputs/country.csv", new StarRecordMapper()), "countries");
-  const SOURCE__users_with_incorrect_countries_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__users_0, SOURCE__countries_0, condition_0, JoinType.LeftOuter), new StarRecordMapper(), (record: any) => {
-      record = recordToObject(record);
-      Object.assign(globalThis, record);
-      const res = // Condition must be on new line to accomodate for the tsIgnore flag
-          !record.countryCode
-      return res;
-  }), "users_with_incorrect_countries");
-  const SOURCE__users_with_incorrect_roles_0 = new NamedSource(new SelectQuerySource(new JoinSource(SOURCE__roles_0, SOURCE__users_0, condition_1, JoinType.RightOuter), new StarRecordMapper(), (record: any) => {
-      record = recordToObject(record);
-      Object.assign(globalThis, record);
-      const res = // Condition must be on new line to accomodate for the tsIgnore flag
-          !record.roleName
-      return res;
-  }), "users_with_incorrect_roles");
-  const OUTPUT_FILE__0 = FileOutputFactory.create(`${output}--users_with_incorrect_countries.csv`);
-  SOURCE__users_with_incorrect_countries_0.registerConsumer(OUTPUT_FILE__0);
+  let input: string = "inputs/users.csv";
   
-  const OUTPUT_FILE__1 = FileOutputFactory.create(`${output}--users_with_incorrect_roles.csv`);
-  SOURCE__users_with_incorrect_roles_0.registerConsumer(OUTPUT_FILE__1);
+  let output: string = "outputs/variables-define_variables--1.csv";
+  
+  const SOURCE__input_0 = new NamedSource(new SelectQuerySource(FileSourceFactory.create(input, new StarRecordMapper()), new RecordMapper_0(), undefined), "input");
+  const OUTPUT_FILE__0 = FileOutputFactory.create(output);
+  SOURCE__input_0.registerConsumer(OUTPUT_FILE__0);
+  
+  output = "outputs/variables-define_variables--2.csv";
+  
+  const OUTPUT_FILE__1 = FileOutputFactory.create(output);
+  SOURCE__input_0.registerConsumer(OUTPUT_FILE__1);
   
 
   ///////////////////////////////////////////////
